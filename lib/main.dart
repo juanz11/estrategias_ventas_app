@@ -273,11 +273,59 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
 
+  final List<_IngresoMensual> _ingresos = [
+    _IngresoMensual(
+      etiqueta: 'Salario mensual',
+      tipo: _IngresoTipo.fija,
+      monto: 1200,
+    ),
+  ];
+
+  double get _totalIngresos => _ingresos.fold(0, (sum, it) => sum + it.monto);
+
+  Future<void> _addIngreso() async {
+    final result = await _openIngresoModal(context);
+    if (!mounted || result == null) return;
+    setState(() => _ingresos.add(result));
+  }
+
+  Future<void> _editIngreso(int index) async {
+    final result = await _openIngresoModal(context, initial: _ingresos[index]);
+    if (!mounted || result == null) return;
+    setState(() => _ingresos[index] = result);
+  }
+
+  void _deleteIngreso(int index) {
+    setState(() => _ingresos.removeAt(index));
+  }
+
+  void _openIngresosScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _IngresosMensualesScreen(
+          items: _ingresos,
+          onAdd: _addIngreso,
+          onEdit: _editIngreso,
+          onDelete: _deleteIngreso,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final views = [
-      const _ResumenTab(),
+      _ResumenTab(
+        totalIngresos: _totalIngresos,
+        onOpenIngresos: _openIngresosScreen,
+      ),
       const _MercadoTab(),
+      _IngresosMensualesTab(
+        items: _ingresos,
+        onAdd: _addIngreso,
+        onEdit: _editIngreso,
+        onDelete: _deleteIngreso,
+      ),
       _PerfilTab(
         onLogout: () {
           Navigator.of(context).pushAndRemoveUntil(
@@ -289,6 +337,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return Scaffold(
+      drawer: Drawer(
+        child: SafeArea(
+          child: ListView(
+            children: [
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.dashboard_outlined),
+                title: const Text('Resumen'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  setState(() => _tab = 0);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.show_chart_outlined),
+                title: const Text('Mercado'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  setState(() => _tab = 1);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.payments_outlined),
+                title: const Text('Ingresos mensuales'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _openIngresosScreen();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Perfil'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  setState(() => _tab = 3);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -324,6 +413,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Mercado',
           ),
           NavigationDestination(
+            icon: Icon(Icons.payments_outlined),
+            selectedIcon: Icon(Icons.payments),
+            label: 'Ingresos',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Perfil',
@@ -335,7 +429,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _ResumenTab extends StatelessWidget {
-  const _ResumenTab();
+  const _ResumenTab({
+    required this.totalIngresos,
+    required this.onOpenIngresos,
+  });
+
+  final double totalIngresos;
+  final VoidCallback onOpenIngresos;
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +446,10 @@ class _ResumenTab extends StatelessWidget {
         children: [
           const _KpisGrid(),
           const SizedBox(height: 14),
-          const _IngresosMensualesSection(),
+          _IngresosMensualesPreviewCard(
+            total: totalIngresos,
+            onOpen: onOpenIngresos,
+          ),
           const SizedBox(height: 14),
           _CardSection(
             title: 'Ventas (últimos 7 días)',
@@ -551,45 +654,14 @@ class _IngresoMensual {
   }
 }
 
-class _IngresosMensualesSection extends StatefulWidget {
-  const _IngresosMensualesSection();
+class _IngresosMensualesPreviewCard extends StatelessWidget {
+  const _IngresosMensualesPreviewCard({
+    required this.total,
+    required this.onOpen,
+  });
 
-  @override
-  State<_IngresosMensualesSection> createState() =>
-      _IngresosMensualesSectionState();
-}
-
-class _IngresosMensualesSectionState extends State<_IngresosMensualesSection> {
-  final List<_IngresoMensual> _items = [
-    _IngresoMensual(
-      etiqueta: 'Salario mensual',
-      tipo: _IngresoTipo.fija,
-      monto: 1200,
-    ),
-  ];
-
-  double get _total => _items.fold(0, (sum, it) => sum + it.monto);
-
-  Future<void> _openModal({int? editIndex}) async {
-    final existing = editIndex == null ? null : _items[editIndex];
-    final result = await showModalBottomSheet<_IngresoMensual>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) {
-        return _IngresoModal(initial: existing);
-      },
-    );
-
-    if (!mounted || result == null) return;
-    setState(() {
-      if (editIndex == null) {
-        _items.add(result);
-      } else {
-        _items[editIndex] = result;
-      }
-    });
-  }
+  final double total;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -598,164 +670,352 @@ class _IngresosMensualesSectionState extends State<_IngresosMensualesSection> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Row(
           children: [
-            Row(
+            Container(
+              height: 44,
+              width: 44,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.payments_outlined, color: colorScheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Resumen Mensual de ingresos',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Total: ${_money(total)}',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            FilledButton.tonal(onPressed: onOpen, child: const Text('Ver')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IngresosMensualesTab extends StatelessWidget {
+  const _IngresosMensualesTab({
+    required this.items,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<_IngresoMensual> items;
+  final Future<void> Function() onAdd;
+  final Future<void> Function(int index) onEdit;
+  final void Function(int index) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return _IngresosMensualesView(
+      items: items,
+      onAdd: onAdd,
+      onEdit: onEdit,
+      onDelete: onDelete,
+    );
+  }
+}
+
+class _IngresosMensualesScreen extends StatefulWidget {
+  const _IngresosMensualesScreen({
+    required this.items,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<_IngresoMensual> items;
+  final Future<void> Function() onAdd;
+  final Future<void> Function(int index) onEdit;
+  final void Function(int index) onDelete;
+
+  @override
+  State<_IngresosMensualesScreen> createState() =>
+      _IngresosMensualesScreenState();
+}
+
+class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
+  Future<void> _confirmDelete(int index) async {
+    final ok = await _confirmDeleteIngreso(context);
+    if (ok != true) return;
+    _deleteAndRefresh(index);
+  }
+
+  Future<void> _addAndRefresh() async {
+    await widget.onAdd();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _editAndRefresh(int index) async {
+    await widget.onEdit(index);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _deleteAndRefresh(int index) {
+    widget.onDelete(index);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Resumen Mensual de ingresos')),
+      body: SafeArea(
+        child: _IngresosMensualesView(
+          items: widget.items,
+          onAdd: _addAndRefresh,
+          onEdit: _editAndRefresh,
+          onDelete: _confirmDelete,
+        ),
+      ),
+    );
+  }
+}
+
+class _IngresosMensualesView extends StatelessWidget {
+  const _IngresosMensualesView({
+    required this.items,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<_IngresoMensual> items;
+  final Future<void> Function() onAdd;
+  final Future<void> Function(int index) onEdit;
+  final void Function(int index) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final total = items.fold(0.0, (sum, it) => sum + it.monto);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                colors: [
+                  colorScheme.primary,
+                  colorScheme.primary.withOpacity(0.82),
+                ],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Resumen Mensual de ingresos',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Agrega ingresos y mira el total mensual',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: Colors.black54),
-                      ),
-                    ],
+                const Text(
+                  'Balance mensual',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: () => _openModal(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar'),
+                const SizedBox(height: 10),
+                Text(
+                  _money(total),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${items.length} ingreso(s) registrado(s)',
+                        style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                      ),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        onAdd();
+                      },
+                      child: const Text('Agregar'),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            if (_items.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+          ),
+          const SizedBox(height: 14),
+          if (items.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     Icon(Icons.info_outline, color: colorScheme.primary),
                     const SizedBox(width: 10),
                     const Expanded(
-                      child: Text('Aún no tienes ingresos cargados.'),
+                      child: Text(
+                        'Agrega tu primer ingreso para ver el balance.',
+                      ),
                     ),
                   ],
                 ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, i) {
-                  final it = _items[i];
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.black.withOpacity(0.06)),
+              ),
+            )
+          else
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Ingresos',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          height: 40,
-                          width: 40,
+                    const SizedBox(height: 12),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) {
+                        final it = items[i];
+                        return Container(
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: colorScheme.primary.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.black.withOpacity(0.06),
+                            ),
                           ),
-                          child: Icon(
-                            Icons.payments_outlined,
-                            color: colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                it.etiqueta,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
+                              Container(
+                                height: 44,
+                                width: 44,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary.withOpacity(0.10),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(
+                                  it.tipo == _IngresoTipo.fija
+                                      ? Icons.lock_outline
+                                      : it.tipo == _IngresoTipo.variable
+                                      ? Icons.swap_horiz
+                                      : Icons.help_outline,
+                                  color: colorScheme.primary,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _tipoLabel(it.tipo),
-                                style: const TextStyle(color: Colors.black54),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      it.etiqueta,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _tipoLabel(it.tipo),
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _money(it.monto),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        onPressed: () {
+                                          onEdit(i);
+                                        },
+                                        icon: const Icon(Icons.edit_outlined),
+                                      ),
+                                      IconButton(
+                                        onPressed: () => onDelete(i),
+                                        icon: const Icon(Icons.delete_outline),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _money(it.monto),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  onPressed: () => _openModal(editIndex: i),
-                                  icon: const Icon(Icons.edit_outlined),
-                                  tooltip: 'Editar',
-                                ),
-                                IconButton(
-                                  onPressed: () =>
-                                      setState(() => _items.removeAt(i)),
-                                  icon: const Icon(Icons.delete_outline),
-                                  tooltip: 'Eliminar',
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Total de Ingresos Mensuales',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                  Text(
-                    _money(_total),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Total de Ingresos Mensuales',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                Text(
+                  _money(total),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -903,6 +1163,42 @@ class _IngresoModalState extends State<_IngresoModal> {
       ),
     );
   }
+}
+
+Future<bool?> _confirmDeleteIngreso(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Eliminar ingreso'),
+        content: const Text('¿Está seguro que desea eliminar este ingreso?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<_IngresoMensual?> _openIngresoModal(
+  BuildContext context, {
+  _IngresoMensual? initial,
+}) {
+  return showModalBottomSheet<_IngresoMensual>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return _IngresoModal(initial: initial);
+    },
+  );
 }
 
 String _tipoLabel(_IngresoTipo tipo) {
