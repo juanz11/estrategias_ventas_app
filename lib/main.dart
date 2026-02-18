@@ -5,6 +5,289 @@ void main() {
   runApp(const EstrategiasVentasApp());
 }
 
+class _GastoDraft {
+  _GastoDraft({
+    required this.subCategoria,
+    required this.monto,
+    required this.periodicidad,
+    required this.esFijo,
+    required this.pagoConTarjeta,
+    required this.gastoHormiga,
+  });
+
+  final TextEditingController subCategoria;
+  final TextEditingController monto;
+  _GastoPeriodicidad periodicidad;
+  bool esFijo;
+  bool pagoConTarjeta;
+  bool gastoHormiga;
+
+  void dispose() {
+    subCategoria.dispose();
+    monto.dispose();
+  }
+}
+
+class _MultiGastoModal extends StatefulWidget {
+  const _MultiGastoModal({required this.categoria});
+
+  final String categoria;
+
+  @override
+  State<_MultiGastoModal> createState() => _MultiGastoModalState();
+}
+
+class _MultiGastoModalState extends State<_MultiGastoModal> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _categoria;
+  final List<_GastoDraft> _drafts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _categoria = TextEditingController(text: widget.categoria);
+    _addDraft();
+  }
+
+  @override
+  void dispose() {
+    _categoria.dispose();
+    for (final d in _drafts) {
+      d.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addDraft() {
+    _drafts.add(
+      _GastoDraft(
+        subCategoria: TextEditingController(),
+        monto: TextEditingController(),
+        periodicidad: _GastoPeriodicidad.mensual,
+        esFijo: false,
+        pagoConTarjeta: false,
+        gastoHormiga: false,
+      ),
+    );
+  }
+
+  void _removeDraft(int index) {
+    final d = _drafts.removeAt(index);
+    d.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final categoria = _categoria.text.trim();
+    final items = <_GastoMensual>[];
+
+    for (final d in _drafts) {
+      final sub = d.subCategoria.text.trim();
+      final montoRaw = d.monto.text.trim().replaceAll(',', '.');
+      final monto = double.parse(montoRaw);
+      items.add(
+        _GastoMensual(
+          categoria: categoria,
+          subCategoria: sub,
+          monto: monto,
+          esFijo: d.esFijo,
+          pagoConTarjeta: d.pagoConTarjeta,
+          gastoHormiga: d.gastoHormiga,
+          periodicidad: d.periodicidad,
+        ),
+      );
+    }
+
+    Navigator.of(context).pop(items);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: bottom + 16,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Agregar gastos',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _categoria,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Categoría',
+                  prefixIcon: Icon(Icons.folder_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: _drafts.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final d = _drafts[index];
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.02),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.black.withOpacity(0.06),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Gasto ${index + 1}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _drafts.length <= 1
+                                    ? null
+                                    : () {
+                                        setState(() => _removeDraft(index));
+                                      },
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: d.subCategoria,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Sub Categoría',
+                              hintText: 'Ej: Luz / Agua / Alquiler',
+                              prefixIcon: Icon(Icons.label_outline),
+                            ),
+                            validator: (v) {
+                              final text = (v ?? '').trim();
+                              if (text.isEmpty) {
+                                return 'Escribe una sub categoría.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<_GastoPeriodicidad>(
+                            value: d.periodicidad,
+                            decoration: const InputDecoration(
+                              labelText: 'Periodicidad',
+                              prefixIcon: Icon(Icons.calendar_month_outlined),
+                            ),
+                            items: _GastoPeriodicidad.values
+                                .map(
+                                  (v) => DropdownMenuItem(
+                                    value: v,
+                                    child: Text(_periodicidadLabel(v)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v == null) return;
+                              setState(() => d.periodicidad = v);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: d.monto,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Monto',
+                              hintText: 'Ej: 25.00',
+                              prefixIcon: Icon(Icons.attach_money),
+                            ),
+                            validator: (v) {
+                              final raw = (v ?? '').trim();
+                              if (raw.isEmpty) return 'Ingresa un monto.';
+                              final normalized = raw.replaceAll(',', '.');
+                              final parsed = double.tryParse(normalized);
+                              if (parsed == null) return 'Monto inválido.';
+                              if (parsed < 0) return 'No puede ser negativo.';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: d.esFijo,
+                            onChanged: (v) => setState(() => d.esFijo = v),
+                            title: const Text('Gasto fijo'),
+                          ),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: d.pagoConTarjeta,
+                            onChanged: (v) =>
+                                setState(() => d.pagoConTarjeta = v),
+                            title: const Text('Pago con tarjeta'),
+                          ),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: d.gastoHormiga,
+                            onChanged: (v) =>
+                                setState(() => d.gastoHormiga = v),
+                            title: const Text('Gasto hormiga'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () {
+                    setState(() => _addDraft());
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar otra sub categoría'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.check),
+                  label: const Text('Guardar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -268,6 +551,177 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+class _GastosGroupedCard extends StatelessWidget {
+  const _GastosGroupedCard({
+    required this.gastos,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onAddToCategoria,
+  });
+
+  final List<_GastoMensual> gastos;
+  final Future<void> Function(int index) onEdit;
+  final void Function(int index) onDelete;
+  final Future<void> Function(String categoria) onAddToCategoria;
+
+  @override
+  Widget build(BuildContext context) {
+    final grouped = <String, List<MapEntry<int, _GastoMensual>>>{};
+    for (var i = 0; i < gastos.length; i++) {
+      final g = gastos[i];
+      grouped.putIfAbsent(g.categoria, () => []).add(MapEntry(i, g));
+    }
+
+    final categories = grouped.keys.toList()..sort();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Gastos',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: categories.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, idx) {
+                final cat = categories[idx];
+                final entries = grouped[cat]!;
+                final subtotal = entries.fold<double>(
+                  0,
+                  (sum, e) => sum + e.value.monto,
+                );
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.black.withOpacity(0.06)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              cat,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              onAddToCategoria(cat);
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Agregar gasto'),
+                          ),
+                          Text(
+                            _money(subtotal),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: entries.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, i) {
+                          final entry = entries[i];
+                          final index = entry.key;
+                          final g = entry.value;
+                          return Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.02),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        g.subCategoria,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${_periodicidadLabel(g.periodicidad)} • ${g.esFijo ? 'Fijo' : 'Variable'}'
+                                        '${g.pagoConTarjeta ? ' • Tarjeta' : ''}'
+                                        '${g.gastoHormiga ? ' • Hormiga' : ''}',
+                                        style: const TextStyle(
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _money(g.monto),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () {
+                                            onEdit(index);
+                                          },
+                                          icon: const Icon(Icons.edit_outlined),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => onDelete(index),
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -283,6 +737,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       etiqueta: 'Salario mensual',
       tipo: _IngresoTipo.fija,
       monto: 1200,
+    ),
+  ];
+
+  final List<_GastoMensual> _gastos = [
+    _GastoMensual(
+      categoria: 'Hogar',
+      subCategoria: 'Internet',
+      monto: 45,
+      esFijo: true,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+    ),
+    _GastoMensual(
+      categoria: 'Transporte',
+      subCategoria: 'Gasolina',
+      monto: 25,
+      esFijo: false,
+      pagoConTarjeta: false,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.semanal,
     ),
   ];
 
@@ -304,14 +779,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _ingresos.removeAt(index));
   }
 
+  Future<void> _addGasto() async {
+    final result = await _openGastoModal(context);
+    if (!mounted || result == null) return;
+    setState(() => _gastos.add(result));
+  }
+
+  Future<void> _editGasto(int index) async {
+    final result = await _openGastoModal(context, initial: _gastos[index]);
+    if (!mounted || result == null) return;
+    setState(() => _gastos[index] = result);
+  }
+
+  void _deleteGasto(int index) {
+    setState(() => _gastos.removeAt(index));
+  }
+
+  Future<void> _addGastosToCategoria(String categoria) async {
+    final result = await _openMultiGastoModal(context, categoria: categoria);
+    if (!mounted || result == null || result.isEmpty) return;
+    setState(() => _gastos.addAll(result));
+  }
+
   void _openIngresosScreen() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _IngresosMensualesScreen(
           items: _ingresos,
+          gastos: _gastos,
           onAdd: _addIngreso,
           onEdit: _editIngreso,
           onDelete: _deleteIngreso,
+          onAddGasto: _addGasto,
+          onEditGasto: _editGasto,
+          onDeleteGasto: _deleteGasto,
+          onAddGastosCategoria: _addGastosToCategoria,
         ),
       ),
     );
@@ -327,9 +829,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const _MercadoTab(),
       _IngresosMensualesTab(
         items: _ingresos,
+        gastos: _gastos,
         onAdd: _addIngreso,
         onEdit: _editIngreso,
         onDelete: _deleteIngreso,
+        onAddGasto: _addGasto,
+        onEditGasto: _editGasto,
+        onDeleteGasto: _deleteGasto,
+        onAddGastosCategoria: _addGastosToCategoria,
       ),
       _PerfilTab(
         onLogout: () {
@@ -643,6 +1150,57 @@ class _CardSection extends StatelessWidget {
 
 enum _IngresoTipo { fija, variable, sinEspecificar }
 
+enum _GastoPeriodicidad {
+  diario,
+  semanal,
+  quincenal,
+  mensual,
+  bimestral,
+  trimestral,
+  semestral,
+  anual,
+}
+
+class _GastoMensual {
+  _GastoMensual({
+    required this.categoria,
+    required this.subCategoria,
+    required this.monto,
+    required this.esFijo,
+    required this.pagoConTarjeta,
+    required this.gastoHormiga,
+    required this.periodicidad,
+  });
+
+  final String categoria;
+  final String subCategoria;
+  final double monto;
+  final bool esFijo;
+  final bool pagoConTarjeta;
+  final bool gastoHormiga;
+  final _GastoPeriodicidad periodicidad;
+
+  _GastoMensual copyWith({
+    String? categoria,
+    String? subCategoria,
+    double? monto,
+    bool? esFijo,
+    bool? pagoConTarjeta,
+    bool? gastoHormiga,
+    _GastoPeriodicidad? periodicidad,
+  }) {
+    return _GastoMensual(
+      categoria: categoria ?? this.categoria,
+      subCategoria: subCategoria ?? this.subCategoria,
+      monto: monto ?? this.monto,
+      esFijo: esFijo ?? this.esFijo,
+      pagoConTarjeta: pagoConTarjeta ?? this.pagoConTarjeta,
+      gastoHormiga: gastoHormiga ?? this.gastoHormiga,
+      periodicidad: periodicidad ?? this.periodicidad,
+    );
+  }
+}
+
 class _IngresoMensual {
   _IngresoMensual({
     required this.etiqueta,
@@ -723,23 +1281,38 @@ class _IngresosMensualesPreviewCard extends StatelessWidget {
 class _IngresosMensualesTab extends StatelessWidget {
   const _IngresosMensualesTab({
     required this.items,
+    required this.gastos,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
+    required this.onAddGasto,
+    required this.onEditGasto,
+    required this.onDeleteGasto,
+    required this.onAddGastosCategoria,
   });
 
   final List<_IngresoMensual> items;
+  final List<_GastoMensual> gastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
+  final Future<void> Function() onAddGasto;
+  final Future<void> Function(int index) onEditGasto;
+  final void Function(int index) onDeleteGasto;
+  final Future<void> Function(String categoria) onAddGastosCategoria;
 
   @override
   Widget build(BuildContext context) {
     return _IngresosMensualesView(
       items: items,
+      gastos: gastos,
       onAdd: onAdd,
       onEdit: onEdit,
       onDelete: onDelete,
+      onAddGasto: onAddGasto,
+      onEditGasto: onEditGasto,
+      onDeleteGasto: onDeleteGasto,
+      onAddGastosCategoria: onAddGastosCategoria,
     );
   }
 }
@@ -747,15 +1320,25 @@ class _IngresosMensualesTab extends StatelessWidget {
 class _IngresosMensualesScreen extends StatefulWidget {
   const _IngresosMensualesScreen({
     required this.items,
+    required this.gastos,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
+    required this.onAddGasto,
+    required this.onEditGasto,
+    required this.onDeleteGasto,
+    required this.onAddGastosCategoria,
   });
 
   final List<_IngresoMensual> items;
+  final List<_GastoMensual> gastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
+  final Future<void> Function() onAddGasto;
+  final Future<void> Function(int index) onEditGasto;
+  final void Function(int index) onDeleteGasto;
+  final Future<void> Function(String categoria) onAddGastosCategoria;
 
   @override
   State<_IngresosMensualesScreen> createState() =>
@@ -763,6 +1346,12 @@ class _IngresosMensualesScreen extends StatefulWidget {
 }
 
 class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
+  Future<void> _confirmDeleteGasto(int index) async {
+    final ok = await _confirmDeleteIngreso(context);
+    if (ok != true) return;
+    _deleteGastoAndRefresh(index);
+  }
+
   Future<void> _confirmDelete(int index) async {
     final ok = await _confirmDeleteIngreso(context);
     if (ok != true) return;
@@ -787,6 +1376,30 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
     setState(() {});
   }
 
+  Future<void> _addGastoAndRefresh() async {
+    await widget.onAddGasto();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _editGastoAndRefresh(int index) async {
+    await widget.onEditGasto(index);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _deleteGastoAndRefresh(int index) {
+    widget.onDeleteGasto(index);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _addGastosCategoriaAndRefresh(String categoria) async {
+    await widget.onAddGastosCategoria(categoria);
+    if (!mounted) return;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -794,38 +1407,84 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
       body: SafeArea(
         child: _IngresosMensualesView(
           items: widget.items,
+          gastos: widget.gastos,
           onAdd: _addAndRefresh,
           onEdit: _editAndRefresh,
           onDelete: _confirmDelete,
+          onAddGasto: _addGastoAndRefresh,
+          onEditGasto: _editGastoAndRefresh,
+          onDeleteGasto: _confirmDeleteGasto,
+          onAddGastosCategoria: _addGastosCategoriaAndRefresh,
         ),
       ),
     );
   }
 }
 
-class _IngresosMensualesView extends StatelessWidget {
+enum _MensualViewMode { ingresos, gastos }
+
+class _IngresosMensualesView extends StatefulWidget {
   const _IngresosMensualesView({
     required this.items,
+    required this.gastos,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
+    required this.onAddGasto,
+    required this.onEditGasto,
+    required this.onDeleteGasto,
+    required this.onAddGastosCategoria,
   });
 
   final List<_IngresoMensual> items;
+  final List<_GastoMensual> gastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
+  final Future<void> Function() onAddGasto;
+  final Future<void> Function(int index) onEditGasto;
+  final void Function(int index) onDeleteGasto;
+  final Future<void> Function(String categoria) onAddGastosCategoria;
+
+  @override
+  State<_IngresosMensualesView> createState() => _IngresosMensualesViewState();
+}
+
+class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
+  _MensualViewMode _mode = _MensualViewMode.ingresos;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final total = items.fold(0.0, (sum, it) => sum + it.monto);
+    final totalIngresos = widget.items.fold(0.0, (sum, it) => sum + it.monto);
+    final totalGastos = widget.gastos.fold(0.0, (sum, it) => sum + it.monto);
+    final isIngresos = _mode == _MensualViewMode.ingresos;
+    final total = isIngresos ? totalIngresos : totalGastos;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SegmentedButton<_MensualViewMode>(
+            segments: const [
+              ButtonSegment(
+                value: _MensualViewMode.ingresos,
+                label: Text('Ingresos'),
+                icon: Icon(Icons.payments_outlined),
+              ),
+              ButtonSegment(
+                value: _MensualViewMode.gastos,
+                label: Text('Gastos'),
+                icon: Icon(Icons.receipt_long_outlined),
+              ),
+            ],
+            selected: <_MensualViewMode>{_mode},
+            onSelectionChanged: (value) {
+              setState(() => _mode = value.first);
+            },
+          ),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -861,7 +1520,9 @@ class _IngresosMensualesView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${items.length} ingreso(s) registrado(s)',
+                        isIngresos
+                            ? '${widget.items.length} ingreso(s) registrado(s)'
+                            : '${widget.gastos.length} gasto(s) registrado(s)',
                         style: TextStyle(color: Colors.white.withOpacity(0.9)),
                       ),
                     ),
@@ -871,9 +1532,15 @@ class _IngresosMensualesView extends StatelessWidget {
                         foregroundColor: colorScheme.primary,
                       ),
                       onPressed: () {
-                        onAdd();
+                        if (isIngresos) {
+                          widget.onAdd();
+                        } else {
+                          widget.onAddGasto();
+                        }
                       },
-                      child: const Text('Agregar'),
+                      child: Text(
+                        isIngresos ? 'Agregar ingreso' : 'Agregar gasto',
+                      ),
                     ),
                   ],
                 ),
@@ -881,7 +1548,7 @@ class _IngresosMensualesView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          if (items.isEmpty)
+          if (isIngresos && widget.items.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -898,7 +1565,24 @@ class _IngresosMensualesView extends StatelessWidget {
                 ),
               ),
             )
-          else
+          else if (!isIngresos && widget.gastos.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: colorScheme.primary),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Agrega tu primer gasto para ver el total mensual.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (isIngresos)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -915,10 +1599,10 @@ class _IngresosMensualesView extends StatelessWidget {
                     ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length,
+                      itemCount: widget.items.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
-                        final it = items[i];
+                        final it = widget.items[i];
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -985,12 +1669,12 @@ class _IngresosMensualesView extends StatelessWidget {
                                     children: [
                                       IconButton(
                                         onPressed: () {
-                                          onEdit(i);
+                                          widget.onEdit(i);
                                         },
                                         icon: const Icon(Icons.edit_outlined),
                                       ),
                                       IconButton(
-                                        onPressed: () => onDelete(i),
+                                        onPressed: () => widget.onDelete(i),
                                         icon: const Icon(Icons.delete_outline),
                                       ),
                                     ],
@@ -1006,6 +1690,13 @@ class _IngresosMensualesView extends StatelessWidget {
                 ),
               ),
             ),
+          if (!isIngresos)
+            _GastosGroupedCard(
+              gastos: widget.gastos,
+              onEdit: widget.onEditGasto,
+              onDelete: widget.onDeleteGasto,
+              onAddToCategoria: widget.onAddGastosCategoria,
+            ),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(14),
@@ -1015,10 +1706,12 @@ class _IngresosMensualesView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Total de Ingresos Mensuales',
-                    style: TextStyle(fontWeight: FontWeight.w900),
+                    isIngresos
+                        ? 'Total de Ingresos Mensuales'
+                        : 'Total de Gastos Mensuales',
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
                 Text(
@@ -1178,6 +1871,196 @@ class _IngresoModalState extends State<_IngresoModal> {
   }
 }
 
+class _GastoModal extends StatefulWidget {
+  const _GastoModal({this.initial});
+
+  final _GastoMensual? initial;
+
+  @override
+  State<_GastoModal> createState() => _GastoModalState();
+}
+
+class _GastoModalState extends State<_GastoModal> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _categoria;
+  late final TextEditingController _subCategoria;
+  late final TextEditingController _monto;
+  late bool _esFijo;
+  late bool _pagoConTarjeta;
+  late bool _gastoHormiga;
+  late _GastoPeriodicidad _periodicidad;
+
+  @override
+  void initState() {
+    super.initState();
+    _categoria = TextEditingController(text: widget.initial?.categoria ?? '');
+    _subCategoria = TextEditingController(
+      text: widget.initial?.subCategoria ?? '',
+    );
+    _monto = TextEditingController(
+      text: widget.initial == null
+          ? ''
+          : widget.initial!.monto.toStringAsFixed(2),
+    );
+    _esFijo = widget.initial?.esFijo ?? false;
+    _pagoConTarjeta = widget.initial?.pagoConTarjeta ?? false;
+    _gastoHormiga = widget.initial?.gastoHormiga ?? false;
+    _periodicidad = widget.initial?.periodicidad ?? _GastoPeriodicidad.mensual;
+  }
+
+  @override
+  void dispose() {
+    _categoria.dispose();
+    _subCategoria.dispose();
+    _monto.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    final parsed = double.parse(_monto.text.trim().replaceAll(',', '.'));
+    final item = _GastoMensual(
+      categoria: _categoria.text.trim(),
+      subCategoria: _subCategoria.text.trim(),
+      monto: parsed,
+      esFijo: _esFijo,
+      pagoConTarjeta: _pagoConTarjeta,
+      gastoHormiga: _gastoHormiga,
+      periodicidad: _periodicidad,
+    );
+    Navigator.of(context).pop(item);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: bottom + 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.initial == null ? 'Agregar gasto' : 'Editar gasto',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _categoria,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Categoría',
+                hintText: 'Ej: Hogar / Transporte / Deporte',
+                prefixIcon: Icon(Icons.folder_outlined),
+              ),
+              validator: (v) {
+                final text = (v ?? '').trim();
+                if (text.isEmpty) return 'Escribe una categoría.';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _subCategoria,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Sub Categoría',
+                hintText: 'Ej: Gasolina / Internet / Gym',
+                prefixIcon: Icon(Icons.label_outline),
+              ),
+              validator: (v) {
+                final text = (v ?? '').trim();
+                if (text.isEmpty) return 'Escribe una sub categoría.';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<_GastoPeriodicidad>(
+              value: _periodicidad,
+              decoration: const InputDecoration(
+                labelText: 'Periodicidad',
+                prefixIcon: Icon(Icons.calendar_month_outlined),
+              ),
+              items: _GastoPeriodicidad.values
+                  .map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text(_periodicidadLabel(v)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _periodicidad = v);
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _monto,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Monto del gasto',
+                hintText: 'Ej: 25.00',
+                prefixIcon: Icon(Icons.attach_money),
+              ),
+              validator: (v) {
+                final raw = (v ?? '').trim();
+                if (raw.isEmpty) return 'Ingresa un monto.';
+                final normalized = raw.replaceAll(',', '.');
+                final parsed = double.tryParse(normalized);
+                if (parsed == null) return 'Monto inválido.';
+                if (parsed < 0) return 'No puede ser negativo.';
+                return null;
+              },
+              onFieldSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _esFijo,
+              onChanged: (v) => setState(() => _esFijo = v),
+              title: const Text('Gasto fijo'),
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _pagoConTarjeta,
+              onChanged: (v) => setState(() => _pagoConTarjeta = v),
+              title: const Text('Pago con tarjeta'),
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _gastoHormiga,
+              onChanged: (v) => setState(() => _gastoHormiga = v),
+              title: const Text('Gasto hormiga'),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: _save,
+                icon: const Icon(Icons.check),
+                label: const Text('Guardar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 Future<bool?> _confirmDeleteIngreso(BuildContext context) {
   return showDialog<bool>(
     context: context,
@@ -1196,6 +2079,34 @@ Future<bool?> _confirmDeleteIngreso(BuildContext context) {
           ),
         ],
       );
+    },
+  );
+}
+
+Future<List<_GastoMensual>?> _openMultiGastoModal(
+  BuildContext context, {
+  required String categoria,
+}) {
+  return showModalBottomSheet<List<_GastoMensual>>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return _MultiGastoModal(categoria: categoria);
+    },
+  );
+}
+
+Future<_GastoMensual?> _openGastoModal(
+  BuildContext context, {
+  _GastoMensual? initial,
+}) {
+  return showModalBottomSheet<_GastoMensual>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return _GastoModal(initial: initial);
     },
   );
 }
@@ -1533,6 +2444,27 @@ String _tipoLabel(_IngresoTipo tipo) {
       return 'Variable';
     case _IngresoTipo.sinEspecificar:
       return 'Sin especificar';
+  }
+}
+
+String _periodicidadLabel(_GastoPeriodicidad v) {
+  switch (v) {
+    case _GastoPeriodicidad.diario:
+      return 'Diario';
+    case _GastoPeriodicidad.semanal:
+      return 'Semanal';
+    case _GastoPeriodicidad.quincenal:
+      return 'Quincenal';
+    case _GastoPeriodicidad.mensual:
+      return 'Mensual';
+    case _GastoPeriodicidad.bimestral:
+      return 'Bimestral';
+    case _GastoPeriodicidad.trimestral:
+      return 'Trimestral';
+    case _GastoPeriodicidad.semestral:
+      return 'Semestral';
+    case _GastoPeriodicidad.anual:
+      return 'Anual';
   }
 }
 
