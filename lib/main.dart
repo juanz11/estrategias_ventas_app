@@ -740,6 +740,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
+  final List<String> _categoriasGasto = [
+    'Hogar',
+    'Transporte',
+    'Mercado',
+    'Familia',
+  ];
+
   final List<_GastoMensual> _gastos = [
     _GastoMensual(
       categoria: 'Hogar',
@@ -801,6 +808,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _gastos.addAll(result));
   }
 
+  Future<void> _addCategoriaGasto() async {
+    final result = await _openCategoriaModal(context);
+    if (!mounted || result == null) return;
+    final trimmed = result.trim();
+    if (trimmed.isEmpty) return;
+    setState(() {
+      if (!_categoriasGasto.contains(trimmed)) {
+        _categoriasGasto.add(trimmed);
+      }
+    });
+  }
+
+  Future<void> _deleteCategoriaGasto(String categoria) async {
+    final ok = await _confirmDeleteCategoria(context, categoria);
+    if (ok != true) return;
+    if (!mounted) return;
+    setState(() {
+      _categoriasGasto.remove(categoria);
+      _gastos.removeWhere((g) => g.categoria == categoria);
+    });
+  }
+
   void _openIngresosScreen() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -825,6 +854,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _ResumenTab(
         totalIngresos: _totalIngresos,
         onOpenIngresos: _openIngresosScreen,
+      ),
+      _PresupuestoTab(
+        ingresos: _ingresos,
+        gastos: _gastos,
+        categorias: _categoriasGasto,
+        onAddCategoria: _addCategoriaGasto,
+        onDeleteCategoria: _deleteCategoriaGasto,
+        onAddToCategoria: _addGastosToCategoria,
+        onEditGasto: _editGasto,
+        onDeleteGasto: _deleteGasto,
       ),
       const _MercadoTab(),
       _IngresosMensualesTab(
@@ -863,11 +902,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.savings_outlined),
+                title: const Text('Presupuesto'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  setState(() => _tab = 1);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.show_chart_outlined),
                 title: const Text('Mercado'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  setState(() => _tab = 1);
+                  setState(() => _tab = 2);
                 },
               ),
               ListTile(
@@ -883,7 +930,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 title: const Text('Perfil'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  setState(() => _tab = 3);
+                  setState(() => _tab = 4);
                 },
               ),
             ],
@@ -924,6 +971,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Resumen',
           ),
           NavigationDestination(
+            icon: Icon(Icons.savings_outlined),
+            selectedIcon: Icon(Icons.savings),
+            label: 'Presupuesto',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
             selectedIcon: Icon(Icons.show_chart),
             label: 'Mercado',
@@ -940,6 +992,538 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PresupuestoTab extends StatelessWidget {
+  const _PresupuestoTab({
+    required this.ingresos,
+    required this.gastos,
+    required this.categorias,
+    required this.onAddCategoria,
+    required this.onDeleteCategoria,
+    required this.onAddToCategoria,
+    required this.onEditGasto,
+    required this.onDeleteGasto,
+  });
+
+  final List<_IngresoMensual> ingresos;
+  final List<_GastoMensual> gastos;
+  final List<String> categorias;
+  final Future<void> Function() onAddCategoria;
+  final Future<void> Function(String categoria) onDeleteCategoria;
+  final Future<void> Function(String categoria) onAddToCategoria;
+  final Future<void> Function(int index) onEditGasto;
+  final void Function(int index) onDeleteGasto;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final totalIngresos = ingresos.fold(0.0, (sum, it) => sum + it.monto);
+    final totalGastos = gastos.fold(0.0, (sum, it) => sum + it.monto);
+    final balance = totalIngresos - totalGastos;
+
+    final ingresosFijos = ingresos
+        .where((i) => i.tipo == _IngresoTipo.fija)
+        .fold(0.0, (sum, it) => sum + it.monto);
+    final ingresosVariables = ingresos
+        .where((i) => i.tipo != _IngresoTipo.fija)
+        .fold(0.0, (sum, it) => sum + it.monto);
+
+    final gastosHormiga = gastos
+        .where((g) => g.gastoHormiga)
+        .fold(0.0, (sum, it) => sum + it.monto);
+    final gastosFijos = gastos
+        .where((g) => g.esFijo && !g.gastoHormiga)
+        .fold(0.0, (sum, it) => sum + it.monto);
+    final gastosVariables = gastos
+        .where((g) => !g.esFijo && !g.gastoHormiga)
+        .fold(0.0, (sum, it) => sum + it.monto);
+
+    final cats = {...categorias, ...gastos.map((g) => g.categoria)}.toList()
+      ..sort();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                colors: [scheme.secondary, scheme.secondary.withOpacity(0.82)],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Presupuesto mensual',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _money(balance),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Ingresos: ${_money(totalIngresos)}  •  Gastos: ${_money(totalGastos)}',
+                  style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Ingresos Promedio Mensuales',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      Text(
+                        _money(totalIngresos),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (ingresos.isEmpty)
+                    const Text('Aún no tienes ingresos registrados.')
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: ingresos.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final it = ingresos[i];
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.02),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      it.etiqueta,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _tipoLabel(it.tipo),
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                _money(it.monto),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Ingresos vs Gastos',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 210,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        gridData: const FlGridData(show: false),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                final label = value.toInt() == 0
+                                    ? 'Ingresos'
+                                    : 'Gastos';
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    label,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        barTouchData: BarTouchData(enabled: false),
+                        barGroups: [
+                          BarChartGroupData(
+                            x: 0,
+                            barRods: [
+                              BarChartRodData(
+                                toY: totalIngresos,
+                                width: 26,
+                                borderRadius: BorderRadius.circular(10),
+                                rodStackItems: [
+                                  BarChartRodStackItem(
+                                    0,
+                                    ingresosFijos,
+                                    scheme.primary,
+                                  ),
+                                  BarChartRodStackItem(
+                                    ingresosFijos,
+                                    ingresosFijos + ingresosVariables,
+                                    scheme.tertiary,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          BarChartGroupData(
+                            x: 1,
+                            barRods: [
+                              BarChartRodData(
+                                toY: totalGastos,
+                                width: 26,
+                                borderRadius: BorderRadius.circular(10),
+                                rodStackItems: [
+                                  BarChartRodStackItem(
+                                    0,
+                                    gastosFijos,
+                                    scheme.error,
+                                  ),
+                                  BarChartRodStackItem(
+                                    gastosFijos,
+                                    gastosFijos + gastosVariables,
+                                    scheme.error.withOpacity(0.65),
+                                  ),
+                                  BarChartRodStackItem(
+                                    gastosFijos + gastosVariables,
+                                    gastosFijos +
+                                        gastosVariables +
+                                        gastosHormiga,
+                                    scheme.tertiary.withOpacity(0.85),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      _LegendDot(color: scheme.primary, label: 'Ingreso fijo'),
+                      _LegendDot(
+                        color: scheme.tertiary,
+                        label: 'Ingreso variable',
+                      ),
+                      _LegendDot(color: scheme.error, label: 'Gasto fijo'),
+                      _LegendDot(
+                        color: scheme.error.withOpacity(0.65),
+                        label: 'Gasto variable',
+                      ),
+                      _LegendDot(
+                        color: scheme.tertiary.withOpacity(0.85),
+                        label: 'Gasto hormiga',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: scheme.tertiary.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Text(
+                      'Cuidado con los gastos hormiga: son pequeños pero se acumulan. \nRevisa esta sección y reduce lo que no sea necesario.',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Detalle de gastos',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: onAddCategoria,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Categoría'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (cats.isEmpty)
+                    const Text('Agrega una categoría para comenzar.')
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: cats.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) {
+                        final cat = cats[i];
+                        final entries = <MapEntry<int, _GastoMensual>>[];
+                        for (var idx = 0; idx < gastos.length; idx++) {
+                          final g = gastos[idx];
+                          if (g.categoria == cat) {
+                            entries.add(MapEntry(idx, g));
+                          }
+                        }
+                        final subtotal = entries.fold<double>(
+                          0,
+                          (sum, e) => sum + e.value.monto,
+                        );
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.black.withOpacity(0.06),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      cat,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Eliminar categoría',
+                                    onPressed: () {
+                                      onDeleteCategoria(cat);
+                                    },
+                                    icon: const Icon(Icons.delete_outline),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      onAddToCategoria(cat);
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Agregar'),
+                                  ),
+                                  Text(
+                                    _money(subtotal),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (entries.isEmpty) ...[
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Sin gastos todavía. Usa “Agregar”.',
+                                  style: TextStyle(color: Colors.black54),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 10),
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: entries.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 8),
+                                  itemBuilder: (context, j) {
+                                    final entry = entries[j];
+                                    final index = entry.key;
+                                    final g = entry.value;
+                                    return Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.02),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  g.subCategoria,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '${_periodicidadLabel(g.periodicidad)} • ${g.esFijo ? 'Fijo' : 'Variable'}'
+                                                  '${g.pagoConTarjeta ? ' • Tarjeta' : ''}'
+                                                  '${g.gastoHormiga ? ' • Hormiga' : ''}',
+                                                  style: const TextStyle(
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                _money(g.monto),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    onPressed: () {
+                                                      onEditGasto(index);
+                                                    },
+                                                    icon: const Icon(
+                                                      Icons.edit_outlined,
+                                                    ),
+                                                  ),
+                                                  IconButton(
+                                                    onPressed: () {
+                                                      onDeleteGasto(index);
+                                                    },
+                                                    icon: const Icon(
+                                                      Icons.delete_outline,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          height: 10,
+          width: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }
@@ -2081,6 +2665,63 @@ Future<bool?> _confirmDeleteIngreso(BuildContext context) {
       );
     },
   );
+}
+
+Future<bool?> _confirmDeleteCategoria(BuildContext context, String categoria) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Eliminar categoría'),
+        content: Text(
+          '¿Está seguro que desea eliminar "$categoria"?\n\nTambién se eliminarán sus gastos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<String?> _openCategoriaModal(BuildContext context) {
+  final controller = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Nueva categoría'),
+        content: TextField(
+          controller: controller,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'Nombre de la categoría',
+            hintText: 'Ej: Casa/Hogar',
+          ),
+          onSubmitted: (_) {
+            Navigator.of(ctx).pop(controller.text);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('Agregar'),
+          ),
+        ],
+      );
+    },
+  ).whenComplete(controller.dispose);
 }
 
 Future<List<_GastoMensual>?> _openMultiGastoModal(
