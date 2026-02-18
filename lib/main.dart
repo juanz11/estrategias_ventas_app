@@ -41,7 +41,9 @@ class EstrategiasVentasApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF0D47A1);
+    const primary = Color(0xFF1565C0);
+    const secondary = Color(0xFF2E7D32);
+    const tertiary = Color(0xFFEF6C00);
 
     return MaterialApp(
       title: 'Estadísticas de ventas',
@@ -50,13 +52,19 @@ class EstrategiasVentasApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
           seedColor: primary,
+          secondary: secondary,
+          tertiary: tertiary,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF6F7FB),
+        scaffoldBackgroundColor: const Color(0xFFF3F5F7),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           backgroundColor: primary,
           foregroundColor: Colors.white,
+        ),
+        navigationBarTheme: const NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: Color(0x332E7D32),
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -147,10 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      child: Image.asset(
-                        'assets/logo.webp',
-                        fit: BoxFit.contain,
-                      ),
+                      child: const _AnimatedDeskIllustration(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -390,7 +395,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Image.asset('assets/logo.webp', fit: BoxFit.contain),
+              child: Icon(
+                Icons.show_chart,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             const SizedBox(width: 10),
             const Text('Estadísticas de ventas'),
@@ -542,7 +551,11 @@ class _PerfilTab extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Image.asset('assets/logo.webp', fit: BoxFit.contain),
+                    child: Icon(
+                      Icons.analytics_outlined,
+                      color: colorScheme.primary,
+                      size: 30,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -1185,6 +1198,317 @@ Future<bool?> _confirmDeleteIngreso(BuildContext context) {
       );
     },
   );
+}
+
+class _AnimatedDeskIllustration extends StatefulWidget {
+  const _AnimatedDeskIllustration();
+
+  @override
+  State<_AnimatedDeskIllustration> createState() =>
+      _AnimatedDeskIllustrationState();
+}
+
+class _AnimatedDeskIllustrationState extends State<_AnimatedDeskIllustration>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return CustomPaint(
+          painter: _DeskPainter(
+            t: _controller.value,
+            primary: scheme.primary,
+            secondary: scheme.secondary,
+            tertiary: scheme.tertiary,
+          ),
+          child: const SizedBox.expand(),
+        );
+      },
+    );
+  }
+}
+
+class _DeskPainter extends CustomPainter {
+  _DeskPainter({
+    required this.t,
+    required this.primary,
+    required this.secondary,
+    required this.tertiary,
+  });
+
+  final double t;
+  final Color primary;
+  final Color secondary;
+  final Color tertiary;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final s = (w < h ? w : h);
+    final base = Offset(w / 2, h / 2);
+    final bob = (0.5 - (t - 0.5).abs()) * 2;
+    final y = base.dy + (-1.6 * bob);
+
+    final bg = Paint()..color = const Color(0xFFF3F5F7);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(s * 0.18)),
+      bg,
+    );
+
+    final shadow = Paint()..color = Colors.black.withOpacity(0.06);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(base.dx, y + s * 0.26),
+        width: s * 0.72,
+        height: s * 0.18,
+      ),
+      shadow,
+    );
+
+    final deskTop = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(base.dx, y + s * 0.16),
+        width: s * 0.80,
+        height: s * 0.24,
+      ),
+      Radius.circular(s * 0.06),
+    );
+    final deskPaint = Paint()..color = const Color(0xFFB9835A);
+    canvas.drawRRect(deskTop, deskPaint);
+
+    final deskEdge = Paint()..color = const Color(0xFF9A6B4A);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx, y + s * 0.21),
+          width: s * 0.80,
+          height: s * 0.12,
+        ),
+        Radius.circular(s * 0.06),
+      ),
+      deskEdge,
+    );
+
+    final legPaint = Paint()..color = const Color(0xFF2A2F36);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx - s * 0.30, y + s * 0.32),
+          width: s * 0.08,
+          height: s * 0.26,
+        ),
+        Radius.circular(s * 0.04),
+      ),
+      legPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.30, y + s * 0.32),
+          width: s * 0.08,
+          height: s * 0.26,
+        ),
+        Radius.circular(s * 0.04),
+      ),
+      legPaint,
+    );
+
+    final monitorFrame = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(base.dx - s * 0.20, y - s * 0.02),
+        width: s * 0.34,
+        height: s * 0.22,
+      ),
+      Radius.circular(s * 0.05),
+    );
+    canvas.drawRRect(monitorFrame, Paint()..color = const Color(0xFF1B1F26));
+
+    final shimmer = (0.5 - (t - 0.5).abs()) * 2;
+    final screen = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(base.dx - s * 0.20, y - s * 0.02),
+        width: s * 0.30,
+        height: s * 0.18,
+      ),
+      Radius.circular(s * 0.04),
+    );
+    final screenPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(primary, Colors.white, 0.35 + 0.15 * shimmer)!,
+          Color.lerp(primary, secondary, 0.55)!,
+        ],
+      ).createShader(screen.outerRect);
+    canvas.drawRRect(screen, screenPaint);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx - s * 0.20, y + s * 0.11),
+          width: s * 0.10,
+          height: s * 0.03,
+        ),
+        Radius.circular(s * 0.03),
+      ),
+      Paint()..color = const Color(0xFF1B1F26),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx - s * 0.20, y + s * 0.14),
+          width: s * 0.16,
+          height: s * 0.02,
+        ),
+        Radius.circular(s * 0.03),
+      ),
+      Paint()..color = const Color(0xFF1B1F26),
+    );
+
+    final laptop = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(base.dx + s * 0.06, y + s * 0.12),
+        width: s * 0.30,
+        height: s * 0.12,
+      ),
+      Radius.circular(s * 0.04),
+    );
+    canvas.drawRRect(laptop, Paint()..color = const Color(0xFF4B5563));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.06, y + s * 0.10),
+          width: s * 0.26,
+          height: s * 0.07,
+        ),
+        Radius.circular(s * 0.03),
+      ),
+      Paint()..color = const Color(0xFF93A3B8),
+    );
+
+    final typing = (t * 2) % 1.0;
+    final keyPulse =
+        0.35 + 0.25 * (typing < 0.5 ? typing * 2 : (1 - typing) * 2);
+    final keys = Paint()..color = Colors.white.withOpacity(keyPulse);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.06, y + s * 0.16),
+          width: s * 0.20,
+          height: s * 0.04,
+        ),
+        Radius.circular(s * 0.02),
+      ),
+      keys,
+    );
+
+    final person = Paint()..color = const Color(0xFF2A2F36);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.22, y + s * 0.08),
+          width: s * 0.20,
+          height: s * 0.22,
+        ),
+        Radius.circular(s * 0.09),
+      ),
+      person,
+    );
+
+    final skin = Paint()..color = const Color(0xFFF2C7A5);
+    canvas.drawCircle(Offset(base.dx + s * 0.24, y - s * 0.02), s * 0.07, skin);
+
+    final hair = Paint()..color = const Color(0xFF1B1F26);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.24, y - s * 0.04),
+          width: s * 0.15,
+          height: s * 0.09,
+        ),
+        Radius.circular(s * 0.06),
+      ),
+      hair,
+    );
+
+    final glasses = Paint()..color = tertiary.withOpacity(0.95);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.22, y - s * 0.02),
+          width: s * 0.06,
+          height: s * 0.04,
+        ),
+        Radius.circular(s * 0.015),
+      ),
+      glasses,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.27, y - s * 0.02),
+          width: s * 0.06,
+          height: s * 0.04,
+        ),
+        Radius.circular(s * 0.015),
+      ),
+      glasses,
+    );
+
+    final arm = Paint()..color = const Color(0xFF2D3748);
+    final armY = y + s * 0.10 + (0.8 * bob);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.18, armY),
+          width: s * 0.12,
+          height: s * 0.04,
+        ),
+        Radius.circular(s * 0.03),
+      ),
+      arm,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(base.dx + s * 0.12, armY + s * 0.03),
+          width: s * 0.14,
+          height: s * 0.04,
+        ),
+        Radius.circular(s * 0.03),
+      ),
+      arm,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DeskPainter oldDelegate) {
+    return oldDelegate.t != t ||
+        oldDelegate.primary != primary ||
+        oldDelegate.secondary != secondary ||
+        oldDelegate.tertiary != tertiary;
+  }
 }
 
 Future<_IngresoMensual?> _openIngresoModal(
