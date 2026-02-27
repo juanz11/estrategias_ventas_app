@@ -872,7 +872,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onEditGasto: _editGasto,
         onDeleteGasto: _deleteGastoConfirmed,
       ),
-      const _MercadoTab(),
       _IngresosMensualesTab(
         items: _ingresos,
         gastos: _gastos,
@@ -917,14 +916,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.show_chart_outlined),
-                title: const Text('Mercado'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  setState(() => _tab = 2);
-                },
-              ),
-              ListTile(
                 leading: const Icon(Icons.payments_outlined),
                 title: const Text('Ingresos mensuales'),
                 onTap: () {
@@ -937,7 +928,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 title: const Text('Perfil'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  setState(() => _tab = 4);
+                  setState(() => _tab = 3);
                 },
               ),
             ],
@@ -981,11 +972,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icons.savings_outlined),
             selectedIcon: Icon(Icons.savings),
             label: 'Presupuesto',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
-            label: 'Mercado',
           ),
           NavigationDestination(
             icon: Icon(Icons.payments_outlined),
@@ -1500,6 +1486,27 @@ class _PresupuestoTab extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Comparación: Presupuesto vs Ingresos Reales',
+            child: SizedBox(
+              height: 280,
+              child: _ComparacionIngresosBarChart(
+                presupuesto: totalIngresos,
+                ingresosReales: totalIngresos * 0.85,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Tendencia: Presupuesto vs Realidad',
+            child: SizedBox(
+              height: 240,
+              child: _TendenciaComparacionChart(
+                presupuesto: totalIngresos,
               ),
             ),
           ),
@@ -3858,4 +3865,332 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+}
+
+class _ComparacionIngresosBarChart extends StatelessWidget {
+  const _ComparacionIngresosBarChart({
+    required this.presupuesto,
+    required this.ingresosReales,
+  });
+
+  final double presupuesto;
+  final double ingresosReales;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final maxValue = presupuesto > ingresosReales ? presupuesto : ingresosReales;
+    final displayMax = maxValue * 1.2;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: displayMax,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final label = groupIndex == 0 ? 'Presupuesto' : 'Ingresos Reales';
+                      return BarTooltipItem(
+                        '$label\n${_money(rod.toY)}',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final labels = ['Presupuesto', 'Reales'];
+                        if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              labels[value.toInt()],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  BarChartGroupData(
+                    x: 0,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuesto,
+                        width: 40,
+                        color: scheme.primary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  BarChartGroupData(
+                    x: 1,
+                    barRods: [
+                      BarChartRodData(
+                        toY: ingresosReales,
+                        width: 40,
+                        color: scheme.tertiary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _LegendDot(color: scheme.primary, label: 'Presupuesto'),
+              const SizedBox(width: 16),
+              _LegendDot(color: scheme.tertiary, label: 'Ingresos Reales'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: (ingresosReales >= presupuesto)
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              ingresosReales >= presupuesto
+                  ? '¡Excelente! Superaste tu presupuesto en ${_money(ingresosReales - presupuesto)}'
+                  : 'Falta ${_money(presupuesto - ingresosReales)} para alcanzar tu presupuesto',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: (ingresosReales >= presupuesto)
+                    ? Colors.green.shade800
+                    : Colors.orange.shade800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TendenciaComparacionChart extends StatelessWidget {
+  const _TendenciaComparacionChart({
+    required this.presupuesto,
+  });
+
+  final double presupuesto;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    // Datos simulados de los últimos 6 meses
+    final meses = ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene'];
+    final presupuestoData = List.generate(6, (_) => presupuesto);
+    final ingresosRealesData = [
+      presupuesto * 0.75,
+      presupuesto * 0.82,
+      presupuesto * 0.88,
+      presupuesto * 0.85,
+      presupuesto * 0.92,
+      presupuesto * 0.85,
+    ];
+
+    final maxValue = presupuesto * 1.1;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                maxY: maxValue,
+                minY: 0,
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final mes = meses[spot.x.toInt()];
+                        final label = spot.barIndex == 0 ? 'Presupuesto' : 'Reales';
+                        return LineTooltipItem(
+                          '$label\n$mes: ${_money(spot.y)}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        if (value.toInt() >= 0 && value.toInt() < meses.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              meses[value.toInt()],
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(
+                      6,
+                      (i) => FlSpot(i.toDouble(), presupuestoData[i]),
+                    ),
+                    isCurved: true,
+                    color: scheme.primary,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 4,
+                          color: scheme.primary,
+                          strokeWidth: 2,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: scheme.primary.withOpacity(0.1),
+                    ),
+                  ),
+                  LineChartBarData(
+                    spots: List.generate(
+                      6,
+                      (i) => FlSpot(i.toDouble(), ingresosRealesData[i]),
+                    ),
+                    isCurved: true,
+                    color: scheme.tertiary,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 4,
+                          color: scheme.tertiary,
+                          strokeWidth: 2,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: scheme.tertiary.withOpacity(0.1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _LegendDot(color: scheme.primary, label: 'Presupuesto'),
+              const SizedBox(width: 16),
+              _LegendDot(color: scheme.tertiary, label: 'Ingresos Reales'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _moneyShort(double value) {
+  if (value >= 1000000) {
+    return '\$${(value / 1000000).toStringAsFixed(1)}M';
+  } else if (value >= 1000) {
+    return '\$${(value / 1000).toStringAsFixed(0)}K';
+  }
+  return '\$${value.toStringAsFixed(0)}';
 }
