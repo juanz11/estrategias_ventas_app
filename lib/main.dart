@@ -802,6 +802,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _gastos.removeAt(index));
   }
 
+  Future<void> _deleteGastoConfirmed(int index) async {
+    final ok = await _confirmDeleteGasto(context);
+    if (ok != true) return;
+    if (!mounted) return;
+    _deleteGasto(index);
+  }
+
   Future<void> _addGastosToCategoria(String categoria) async {
     final result = await _openMultiGastoModal(context, categoria: categoria);
     if (!mounted || result == null || result.isEmpty) return;
@@ -863,7 +870,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onDeleteCategoria: _deleteCategoriaGasto,
         onAddToCategoria: _addGastosToCategoria,
         onEditGasto: _editGasto,
-        onDeleteGasto: _deleteGasto,
+        onDeleteGasto: _deleteGastoConfirmed,
       ),
       const _MercadoTab(),
       _IngresosMensualesTab(
@@ -1015,7 +1022,7 @@ class _PresupuestoTab extends StatelessWidget {
   final Future<void> Function(String categoria) onDeleteCategoria;
   final Future<void> Function(String categoria) onAddToCategoria;
   final Future<void> Function(int index) onEditGasto;
-  final void Function(int index) onDeleteGasto;
+  final Future<void> Function(int index) onDeleteGasto;
 
   @override
   Widget build(BuildContext context) {
@@ -1023,6 +1030,14 @@ class _PresupuestoTab extends StatelessWidget {
     final totalIngresos = ingresos.fold(0.0, (sum, it) => sum + it.monto);
     final totalGastos = gastos.fold(0.0, (sum, it) => sum + it.monto);
     final balance = totalIngresos - totalGastos;
+
+    final baseMax = totalIngresos > totalGastos ? totalIngresos : totalGastos;
+    final chartGap = (baseMax * 0.02).clamp(4.0, 22.0);
+    final displayIngresosTotal = totalIngresos + chartGap;
+    final displayGastosTotal = totalGastos + (chartGap * 2);
+    final displayMax = displayIngresosTotal > displayGastosTotal
+        ? displayIngresosTotal
+        : displayGastosTotal;
 
     final ingresosFijos = ingresos
         .where((i) => i.tipo == _IngresoTipo.fija)
@@ -1096,6 +1111,8 @@ class _PresupuestoTab extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Ingresos Promedio Mensuales',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
@@ -1172,6 +1189,8 @@ class _PresupuestoTab extends StatelessWidget {
                 children: [
                   Text(
                     'Ingresos vs Gastos',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
@@ -1180,13 +1199,67 @@ class _PresupuestoTab extends StatelessWidget {
                   SizedBox(
                     height: 210,
                     child: BarChart(
+                      swapAnimationDuration: const Duration(milliseconds: 320),
+                      swapAnimationCurve: Curves.easeOutCubic,
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        gridData: const FlGridData(show: false),
-                        borderData: FlBorderData(show: false),
+                        maxY: displayMax * 1.15,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: (displayMax / 4).clamp(
+                            1,
+                            double.infinity,
+                          ),
+                          getDrawingHorizontalLine: (value) {
+                            return FlLine(
+                              color: Colors.black.withOpacity(0.06),
+                              strokeWidth: 1,
+                            );
+                          },
+                        ),
+                        borderData: FlBorderData(
+                          show: true,
+                          border: const Border(
+                            left: BorderSide(color: Colors.black, width: 1.2),
+                            bottom: BorderSide(color: Colors.black, width: 1.2),
+                            top: BorderSide(color: Colors.black, width: 1.2),
+                            right: BorderSide(color: Colors.black, width: 1.2),
+                          ),
+                        ),
                         titlesData: FlTitlesData(
-                          leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 44,
+                              interval: (displayMax / 4).clamp(
+                                1,
+                                double.infinity,
+                              ),
+                              getTitlesWidget: (value, meta) {
+                                String fmt(double v) {
+                                  if (v >= 1000000) {
+                                    return '${(v / 1000000).toStringAsFixed(1)}M';
+                                  }
+                                  if (v >= 1000) {
+                                    return '${(v / 1000).toStringAsFixed(1)}k';
+                                  }
+                                  return v.toStringAsFixed(0);
+                                }
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Text(
+                                    fmt(value),
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                           rightTitles: const AxisTitles(
                             sideTitles: SideTitles(showTitles: false),
@@ -1214,15 +1287,106 @@ class _PresupuestoTab extends StatelessWidget {
                             ),
                           ),
                         ),
-                        barTouchData: BarTouchData(enabled: false),
+                        barTouchData: BarTouchData(
+                          enabled: true,
+                          handleBuiltInTouches: true,
+                          touchTooltipData: BarTouchTooltipData(
+                            tooltipRoundedRadius: 12,
+                            tooltipPadding: const EdgeInsets.all(10),
+                            tooltipMargin: 8,
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              if (group.x == 0) {
+                                return BarTooltipItem(
+                                  'Ingresos\n',
+                                  const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Fijo: ${_money(ingresosFijos)}\n',
+                                      style: TextStyle(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text:
+                                          'Variable: ${_money(ingresosVariables)}\n',
+                                      style: TextStyle(
+                                        color: scheme.tertiary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Total: ${_money(totalIngresos)}',
+                                      style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+
+                              return BarTooltipItem(
+                                'Gastos\n',
+                                const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.black,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: 'Fijo: ${_money(gastosFijos)}\n',
+                                    style: TextStyle(
+                                      color: scheme.error,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        'Variable: ${_money(gastosVariables)}\n',
+                                    style: TextStyle(
+                                      color: scheme.error.withOpacity(0.75),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'Hormiga: ${_money(gastosHormiga)}\n',
+                                    style: TextStyle(
+                                      color: scheme.tertiary.withOpacity(0.9),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'Total: ${_money(totalGastos)}',
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                         barGroups: [
                           BarChartGroupData(
                             x: 0,
                             barRods: [
                               BarChartRodData(
-                                toY: totalIngresos,
-                                width: 26,
-                                borderRadius: BorderRadius.circular(10),
+                                toY: displayIngresosTotal,
+                                width: 28,
+                                borderRadius: BorderRadius.zero,
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 1,
+                                ),
+                                backDrawRodData: BackgroundBarChartRodData(
+                                  show: true,
+                                  toY: displayMax * 1.15,
+                                  color: Colors.black.withOpacity(0.03),
+                                ),
                                 rodStackItems: [
                                   BarChartRodStackItem(
                                     0,
@@ -1231,7 +1395,14 @@ class _PresupuestoTab extends StatelessWidget {
                                   ),
                                   BarChartRodStackItem(
                                     ingresosFijos,
-                                    ingresosFijos + ingresosVariables,
+                                    ingresosFijos + chartGap,
+                                    Colors.black,
+                                  ),
+                                  BarChartRodStackItem(
+                                    ingresosFijos + chartGap,
+                                    ingresosFijos +
+                                        chartGap +
+                                        ingresosVariables,
                                     scheme.tertiary,
                                   ),
                                 ],
@@ -1242,9 +1413,18 @@ class _PresupuestoTab extends StatelessWidget {
                             x: 1,
                             barRods: [
                               BarChartRodData(
-                                toY: totalGastos,
-                                width: 26,
-                                borderRadius: BorderRadius.circular(10),
+                                toY: displayGastosTotal,
+                                width: 28,
+                                borderRadius: BorderRadius.zero,
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 1,
+                                ),
+                                backDrawRodData: BackgroundBarChartRodData(
+                                  show: true,
+                                  toY: displayMax * 1.15,
+                                  color: Colors.black.withOpacity(0.03),
+                                ),
                                 rodStackItems: [
                                   BarChartRodStackItem(
                                     0,
@@ -1253,12 +1433,27 @@ class _PresupuestoTab extends StatelessWidget {
                                   ),
                                   BarChartRodStackItem(
                                     gastosFijos,
-                                    gastosFijos + gastosVariables,
+                                    gastosFijos + chartGap,
+                                    Colors.black,
+                                  ),
+                                  BarChartRodStackItem(
+                                    gastosFijos + chartGap,
+                                    gastosFijos + chartGap + gastosVariables,
                                     scheme.error.withOpacity(0.65),
                                   ),
                                   BarChartRodStackItem(
-                                    gastosFijos + gastosVariables,
+                                    gastosFijos + chartGap + gastosVariables,
                                     gastosFijos +
+                                        (chartGap * 2) +
+                                        gastosVariables,
+                                    Colors.black,
+                                  ),
+                                  BarChartRodStackItem(
+                                    gastosFijos +
+                                        (chartGap * 2) +
+                                        gastosVariables,
+                                    gastosFijos +
+                                        (chartGap * 2) +
                                         gastosVariables +
                                         gastosHormiga,
                                     scheme.tertiary.withOpacity(0.85),
@@ -1320,6 +1515,8 @@ class _PresupuestoTab extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Detalle de gastos',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
@@ -2652,6 +2849,28 @@ Future<bool?> _confirmDeleteIngreso(BuildContext context) {
       return AlertDialog(
         title: const Text('Eliminar ingreso'),
         content: const Text('¿Está seguro que desea eliminar este ingreso?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<bool?> _confirmDeleteGasto(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Eliminar gasto'),
+        content: const Text('¿Está seguro que desea eliminar este gasto?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
