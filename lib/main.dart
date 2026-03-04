@@ -329,7 +329,7 @@ class EstrategiasVentasApp extends StatelessWidget {
     const tertiary = Color(0xFFEF6C00);
 
     return MaterialApp(
-      title: 'Estadísticas de ventas',
+      title: 'Balance Mensual',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -443,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Estadísticas de ventas',
+                    'Balance Mensual',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
@@ -451,7 +451,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Dashboard: ventas, compras y mercado',
+                    'Control de presupuesto e ingresos',
                     textAlign: TextAlign.center,
                     style: Theme.of(
                       context,
@@ -733,21 +733,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
 
   final List<_IngresoMensual> _ingresos = [
+    // Enero 2026
     _IngresoMensual(
       etiqueta: 'Salario mensual',
       tipo: _IngresoTipo.fija,
       monto: 1200,
+      mes: DateTime(2026, 1, 15),
+    ),
+    _IngresoMensual(
+      etiqueta: 'Freelance',
+      tipo: _IngresoTipo.variable,
+      monto: 350,
+      mes: DateTime(2026, 1, 20),
+    ),
+    // Diciembre 2025
+    _IngresoMensual(
+      etiqueta: 'Salario mensual',
+      tipo: _IngresoTipo.fija,
+      monto: 1200,
+      mes: DateTime(2025, 12, 15),
+    ),
+    _IngresoMensual(
+      etiqueta: 'Bono',
+      tipo: _IngresoTipo.variable,
+      monto: 500,
+      mes: DateTime(2025, 12, 25),
+    ),
+    // Noviembre 2025
+    _IngresoMensual(
+      etiqueta: 'Salario mensual',
+      tipo: _IngresoTipo.fija,
+      monto: 1200,
+      mes: DateTime(2025, 11, 15),
+    ),
+    // Octubre 2025
+    _IngresoMensual(
+      etiqueta: 'Salario mensual',
+      tipo: _IngresoTipo.fija,
+      monto: 1200,
+      mes: DateTime(2025, 10, 15),
+    ),
+    _IngresoMensual(
+      etiqueta: 'Venta',
+      tipo: _IngresoTipo.variable,
+      monto: 280,
+      mes: DateTime(2025, 10, 22),
     ),
   ];
 
   final List<String> _categoriasGasto = [
     'Hogar',
     'Transporte',
-    'Mercado',
+    'Alimentación',
     'Familia',
   ];
 
   final List<_GastoMensual> _gastos = [
+    // Enero 2026
     _GastoMensual(
       categoria: 'Hogar',
       subCategoria: 'Internet',
@@ -756,15 +798,130 @@ class _DashboardScreenState extends State<DashboardScreen> {
       pagoConTarjeta: true,
       gastoHormiga: false,
       periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2026, 1, 5),
     ),
     _GastoMensual(
       categoria: 'Transporte',
       subCategoria: 'Gasolina',
-      monto: 25,
+      monto: 80,
       esFijo: false,
       pagoConTarjeta: false,
       gastoHormiga: false,
-      periodicidad: _GastoPeriodicidad.semanal,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2026, 1, 10),
+    ),
+    _GastoMensual(
+      categoria: 'Alimentación',
+      subCategoria: 'Supermercado',
+      monto: 320,
+      esFijo: false,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2026, 1, 12),
+    ),
+    // Diciembre 2025
+    _GastoMensual(
+      categoria: 'Hogar',
+      subCategoria: 'Internet',
+      monto: 45,
+      esFijo: true,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 12, 5),
+    ),
+    _GastoMensual(
+      categoria: 'Transporte',
+      subCategoria: 'Gasolina',
+      monto: 75,
+      esFijo: false,
+      pagoConTarjeta: false,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 12, 8),
+    ),
+    _GastoMensual(
+      categoria: 'Alimentación',
+      subCategoria: 'Supermercado',
+      monto: 380,
+      esFijo: false,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 12, 10),
+    ),
+    _GastoMensual(
+      categoria: 'Familia',
+      subCategoria: 'Regalos navidad',
+      monto: 250,
+      esFijo: false,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 12, 20),
+    ),
+    // Noviembre 2025
+    _GastoMensual(
+      categoria: 'Hogar',
+      subCategoria: 'Internet',
+      monto: 45,
+      esFijo: true,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 11, 5),
+    ),
+    _GastoMensual(
+      categoria: 'Transporte',
+      subCategoria: 'Gasolina',
+      monto: 70,
+      esFijo: false,
+      pagoConTarjeta: false,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 11, 8),
+    ),
+    _GastoMensual(
+      categoria: 'Alimentación',
+      subCategoria: 'Supermercado',
+      monto: 300,
+      esFijo: false,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 11, 12),
+    ),
+    // Octubre 2025
+    _GastoMensual(
+      categoria: 'Hogar',
+      subCategoria: 'Internet',
+      monto: 45,
+      esFijo: true,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 10, 5),
+    ),
+    _GastoMensual(
+      categoria: 'Transporte',
+      subCategoria: 'Gasolina',
+      monto: 85,
+      esFijo: false,
+      pagoConTarjeta: false,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 10, 10),
+    ),
+    _GastoMensual(
+      categoria: 'Alimentación',
+      subCategoria: 'Supermercado',
+      monto: 340,
+      esFijo: false,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2025, 10, 15),
     ),
   ];
 
@@ -865,6 +1022,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _PresupuestoTab(
         ingresos: _ingresos,
         gastos: _gastos,
+        ingresosReales: _totalIngresos,
         categorias: _categoriasGasto,
         onAddCategoria: _addCategoriaGasto,
         onDeleteCategoria: _deleteCategoriaGasto,
@@ -882,6 +1040,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onEditGasto: _editGasto,
         onDeleteGasto: _deleteGasto,
         onAddGastosCategoria: _addGastosToCategoria,
+      ),
+      _EstadisticasTab(
+        ingresos: _ingresos,
+        gastos: _gastos,
       ),
       _PerfilTab(
         onLogout: () {
@@ -924,11 +1086,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.bar_chart),
+                title: const Text('Estadísticas'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  setState(() => _tab = 3);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.person_outline),
                 title: const Text('Perfil'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  setState(() => _tab = 3);
+                  setState(() => _tab = 4);
                 },
               ),
             ],
@@ -954,7 +1124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Text('Estadísticas de ventas'),
+            const Text('Balance Mensual'),
           ],
         ),
       ),
@@ -979,6 +1149,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Ingresos',
           ),
           NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Estadísticas',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Perfil',
@@ -993,6 +1168,7 @@ class _PresupuestoTab extends StatelessWidget {
   const _PresupuestoTab({
     required this.ingresos,
     required this.gastos,
+    required this.ingresosReales,
     required this.categorias,
     required this.onAddCategoria,
     required this.onDeleteCategoria,
@@ -1003,6 +1179,7 @@ class _PresupuestoTab extends StatelessWidget {
 
   final List<_IngresoMensual> ingresos;
   final List<_GastoMensual> gastos;
+  final double ingresosReales;
   final List<String> categorias;
   final Future<void> Function() onAddCategoria;
   final Future<void> Function(String categoria) onDeleteCategoria;
@@ -1496,7 +1673,7 @@ class _PresupuestoTab extends StatelessWidget {
               height: 280,
               child: _ComparacionIngresosBarChart(
                 presupuesto: totalIngresos,
-                ingresosReales: totalIngresos * 0.85,
+                ingresosReales: ingresosReales,
               ),
             ),
           ),
@@ -1507,6 +1684,19 @@ class _PresupuestoTab extends StatelessWidget {
               height: 240,
               child: _TendenciaComparacionChart(
                 presupuesto: totalIngresos,
+                ingresosReales: ingresosReales,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Comparación: Presupuesto vs Realidad',
+            child: SizedBox(
+              height: 320,
+              child: _ComparacionPresupuestoRealChart(
+                presupuestoIngresos: totalIngresos,
+                ingresosReales: ingresosReales,
+                presupuestoGastos: totalGastos,
               ),
             ),
           ),
@@ -1732,6 +1922,440 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
+class _EstadisticasTab extends StatefulWidget {
+  const _EstadisticasTab({
+    required this.ingresos,
+    required this.gastos,
+  });
+
+  final List<_IngresoMensual> ingresos;
+  final List<_GastoMensual> gastos;
+
+  @override
+  State<_EstadisticasTab> createState() => _EstadisticasTabState();
+}
+
+class _EstadisticasTabState extends State<_EstadisticasTab> {
+  DateTime? _mesSeleccionado;
+  bool _verAnual = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _mesSeleccionado = DateTime.now();
+  }
+
+  List<DateTime> _obtenerMesesDisponibles() {
+    final meses = <DateTime>{};
+    for (final ingreso in widget.ingresos) {
+      meses.add(DateTime(ingreso.mes.year, ingreso.mes.month));
+    }
+    for (final gasto in widget.gastos) {
+      meses.add(DateTime(gasto.mes.year, gasto.mes.month));
+    }
+    final lista = meses.toList()..sort((a, b) => b.compareTo(a));
+    return lista;
+  }
+
+  Map<String, double> _calcularDatosMes(DateTime mes) {
+    final ingresosDelMes = widget.ingresos.where((i) =>
+        i.mes.year == mes.year && i.mes.month == mes.month);
+    final gastosDelMes = widget.gastos.where((g) =>
+        g.mes.year == mes.year && g.mes.month == mes.month);
+
+    final totalIngresos = ingresosDelMes.fold(0.0, (sum, i) => sum + i.monto);
+    final totalGastos = gastosDelMes.fold(0.0, (sum, g) => sum + g.monto);
+
+    return {
+      'ingresos': totalIngresos,
+      'gastos': totalGastos,
+      'balance': totalIngresos - totalGastos,
+    };
+  }
+
+  List<Map<String, dynamic>> _calcularDatosAnuales(int anio) {
+    final datos = <Map<String, dynamic>>[];
+    for (int mes = 1; mes <= 12; mes++) {
+      final fecha = DateTime(anio, mes);
+      final datosMes = _calcularDatosMes(fecha);
+      datos.add({
+        'mes': mes,
+        'fecha': fecha,
+        ...datosMes,
+      });
+    }
+    return datos;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final mesesDisponibles = _obtenerMesesDisponibles();
+    
+    if (mesesDisponibles.isEmpty) {
+      return const Center(
+        child: Text('No hay datos disponibles'),
+      );
+    }
+
+    if (_mesSeleccionado == null || !mesesDisponibles.any((m) =>
+        m.year == _mesSeleccionado!.year && m.month == _mesSeleccionado!.month)) {
+      _mesSeleccionado = mesesDisponibles.first;
+    }
+
+    // Presupuesto estimado (simulado)
+    const presupuestoIngresos = 1500.0;
+    const presupuestoGastos = 800.0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Selector de período',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _verAnual,
+                        onChanged: (value) {
+                          setState(() => _verAnual = value);
+                        },
+                      ),
+                      Text(
+                        _verAnual ? 'Anual' : 'Mensual',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (!_verAnual) ...[
+                    DropdownButtonFormField<DateTime>(
+                      value: _mesSeleccionado,
+                      decoration: const InputDecoration(
+                        labelText: 'Seleccionar mes',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: mesesDisponibles.map((mes) {
+                        return DropdownMenuItem(
+                          value: mes,
+                          child: Text(_formatearMes(mes)),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _mesSeleccionado = value);
+                        }
+                      },
+                    ),
+                  ] else ...[
+                    DropdownButtonFormField<int>(
+                      value: _mesSeleccionado!.year,
+                      decoration: const InputDecoration(
+                        labelText: 'Seleccionar año',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: () {
+                        final anios = mesesDisponibles
+                            .map((m) => m.year)
+                            .toSet()
+                            .toList();
+                        anios.sort((a, b) => b.compareTo(a));
+                        return anios.map((anio) {
+                          return DropdownMenuItem(
+                            value: anio,
+                            child: Text(anio.toString()),
+                          );
+                        }).toList();
+                      }(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _mesSeleccionado = DateTime(value, 1));
+                        }
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (!_verAnual) ...[
+            _buildComparacionMensual(
+              scheme,
+              _mesSeleccionado!,
+              presupuestoIngresos,
+              presupuestoGastos,
+            ),
+          ] else ...[
+            _buildComparacionAnual(
+              scheme,
+              _mesSeleccionado!.year,
+              presupuestoIngresos,
+              presupuestoGastos,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparacionMensual(
+    ColorScheme scheme,
+    DateTime mes,
+    double presupuestoIngresos,
+    double presupuestoGastos,
+  ) {
+    final datos = _calcularDatosMes(mes);
+    final ingresosReales = datos['ingresos']!;
+    final gastosReales = datos['gastos']!;
+    final balanceReal = datos['balance']!;
+    final balancePresupuesto = presupuestoIngresos - presupuestoGastos;
+
+    return Column(
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Resumen de ${_formatearMes(mes)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildKpiCard(
+                        'Ingresos',
+                        ingresosReales,
+                        presupuestoIngresos,
+                        scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildKpiCard(
+                        'Gastos',
+                        gastosReales,
+                        presupuestoGastos,
+                        scheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: balanceReal >= 0
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Balance Real',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _money(balanceReal),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: balanceReal >= 0
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Presupuesto: ${_money(balancePresupuesto)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _CardSection(
+          title: 'Comparación: Presupuesto vs Real',
+          child: SizedBox(
+            height: 280,
+            child: _ComparacionMensualChart(
+              presupuestoIngresos: presupuestoIngresos,
+              presupuestoGastos: presupuestoGastos,
+              ingresosReales: ingresosReales,
+              gastosReales: gastosReales,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparacionAnual(
+    ColorScheme scheme,
+    int anio,
+    double presupuestoIngresos,
+    double presupuestoGastos,
+  ) {
+    final datosAnuales = _calcularDatosAnuales(anio);
+    final totalIngresosReales = datosAnuales.fold(0.0, (sum, d) => sum + d['ingresos']);
+    final totalGastosReales = datosAnuales.fold(0.0, (sum, d) => sum + d['gastos']);
+    final totalPresupuestoIngresos = presupuestoIngresos * 12;
+    final totalPresupuestoGastos = presupuestoGastos * 12;
+
+    return Column(
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Resumen anual $anio',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildKpiCard(
+                        'Ingresos',
+                        totalIngresosReales,
+                        totalPresupuestoIngresos,
+                        scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildKpiCard(
+                        'Gastos',
+                        totalGastosReales,
+                        totalPresupuestoGastos,
+                        scheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _CardSection(
+          title: 'Evolución anual $anio',
+          child: SizedBox(
+            height: 300,
+            child: _EvolucionAnualChart(
+              datosAnuales: datosAnuales,
+              presupuestoIngresos: presupuestoIngresos,
+              presupuestoGastos: presupuestoGastos,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKpiCard(String titulo, double real, double presupuesto, Color color) {
+    final porcentaje = presupuesto > 0 ? (real / presupuesto * 100) : 0.0;
+    final diferencia = real - presupuesto;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _money(real),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Presup: ${_money(presupuesto)}',
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(
+                diferencia >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                size: 14,
+                color: diferencia >= 0 ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${porcentaje.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: diferencia >= 0 ? Colors.green.shade700 : Colors.red.shade700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatearMes(DateTime fecha) {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return '${meses[fecha.month - 1]} ${fecha.year}';
+  }
+}
+
 class _ResumenTab extends StatelessWidget {
   const _ResumenTab({
     required this.totalIngresos,
@@ -1756,13 +2380,13 @@ class _ResumenTab extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _CardSection(
-            title: 'Ventas (últimos 7 días)',
-            child: SizedBox(height: 220, child: _VentasLineChart()),
+            title: 'Balance mensual (últimos 6 meses)',
+            child: SizedBox(height: 220, child: _BalanceMensualChart()),
           ),
           const SizedBox(height: 14),
           _CardSection(
-            title: 'Compras por categoría',
-            child: SizedBox(height: 220, child: _ComprasBarChart()),
+            title: 'Distribución de gastos',
+            child: SizedBox(height: 220, child: _DistribucionGastosChart()),
           ),
           const SizedBox(height: 14),
           _CardSection(
@@ -1770,22 +2394,22 @@ class _ResumenTab extends StatelessWidget {
             child: const Column(
               children: [
                 _ActividadTile(
-                  icon: Icons.point_of_sale,
-                  title: 'Venta registrada',
-                  subtitle: 'Canal: retail',
+                  icon: Icons.attach_money,
+                  title: 'Ingreso registrado',
+                  subtitle: 'Tipo: Fijo',
                   value: '+ USD 840',
                 ),
                 _ActividadTile(
-                  icon: Icons.shopping_cart_checkout,
-                  title: 'Compra registrada',
-                  subtitle: 'Inventario: +18 unidades',
+                  icon: Icons.shopping_bag_outlined,
+                  title: 'Gasto registrado',
+                  subtitle: 'Categoría: Hogar',
                   value: '- USD 310',
                 ),
                 _ActividadTile(
                   icon: Icons.trending_up,
-                  title: 'Señal de mercado',
-                  subtitle: 'Demanda: +8% semanal',
-                  value: 'OK',
+                  title: 'Meta de ahorro',
+                  subtitle: 'Progreso: 78% del mes',
+                  value: 'En camino',
                 ),
               ],
             ),
@@ -1958,7 +2582,8 @@ class _GastoMensual {
     required this.pagoConTarjeta,
     required this.gastoHormiga,
     required this.periodicidad,
-  });
+    DateTime? mes,
+  }) : mes = mes ?? DateTime.now();
 
   final String categoria;
   final String subCategoria;
@@ -1967,6 +2592,7 @@ class _GastoMensual {
   final bool pagoConTarjeta;
   final bool gastoHormiga;
   final _GastoPeriodicidad periodicidad;
+  final DateTime mes;
 
   _GastoMensual copyWith({
     String? categoria,
@@ -1976,6 +2602,7 @@ class _GastoMensual {
     bool? pagoConTarjeta,
     bool? gastoHormiga,
     _GastoPeriodicidad? periodicidad,
+    DateTime? mes,
   }) {
     return _GastoMensual(
       categoria: categoria ?? this.categoria,
@@ -1985,6 +2612,7 @@ class _GastoMensual {
       pagoConTarjeta: pagoConTarjeta ?? this.pagoConTarjeta,
       gastoHormiga: gastoHormiga ?? this.gastoHormiga,
       periodicidad: periodicidad ?? this.periodicidad,
+      mes: mes ?? this.mes,
     );
   }
 }
@@ -1994,21 +2622,25 @@ class _IngresoMensual {
     required this.etiqueta,
     required this.tipo,
     required this.monto,
-  });
+    DateTime? mes,
+  }) : mes = mes ?? DateTime.now();
 
   final String etiqueta;
   final _IngresoTipo tipo;
   final double monto;
+  final DateTime mes;
 
   _IngresoMensual copyWith({
     String? etiqueta,
     _IngresoTipo? tipo,
     double? monto,
+    DateTime? mes,
   }) {
     return _IngresoMensual(
       etiqueta: etiqueta ?? this.etiqueta,
       tipo: tipo ?? this.tipo,
       monto: monto ?? this.monto,
+      mes: mes ?? this.mes,
     );
   }
 }
@@ -3347,31 +3979,31 @@ class _KpisGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = [
       _Kpi(
-        title: 'Ventas (hoy)',
+        title: 'Ingresos (mes)',
         value: 'USD 4,820',
         delta: '+12.4%',
-        icon: Icons.point_of_sale,
+        icon: Icons.attach_money,
         color: Color(0xFF1565C0),
       ),
       _Kpi(
-        title: 'Compras (hoy)',
+        title: 'Gastos (mes)',
         value: 'USD 2,110',
         delta: '-3.1%',
-        icon: Icons.shopping_cart,
+        icon: Icons.shopping_bag_outlined,
         color: Color(0xFF6A1B9A),
       ),
       _Kpi(
-        title: 'Margen',
-        value: '28.6%',
-        delta: '+1.8%',
-        icon: Icons.percent,
+        title: 'Balance',
+        value: 'USD 2,710',
+        delta: '+18.2%',
+        icon: Icons.account_balance_wallet,
         color: Color(0xFF2E7D32),
       ),
       _Kpi(
-        title: 'Mercado',
-        value: 'Estable',
-        delta: 'Volatilidad media',
-        icon: Icons.assessment_outlined,
+        title: 'Ahorro',
+        value: '56.2%',
+        delta: 'Del presupuesto',
+        icon: Icons.savings_outlined,
         color: Color(0xFFEF6C00),
       ),
     ];
@@ -3530,25 +4162,35 @@ class _ActividadTile extends StatelessWidget {
   }
 }
 
-class _VentasLineChart extends StatelessWidget {
-  const _VentasLineChart();
+class _BalanceMensualChart extends StatelessWidget {
+  const _BalanceMensualChart();
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const points = <FlSpot>[
-      FlSpot(0, 2.1),
-      FlSpot(1, 2.4),
-      FlSpot(2, 2.0),
-      FlSpot(3, 2.9),
-      FlSpot(4, 3.2),
-      FlSpot(5, 3.0),
-      FlSpot(6, 3.6),
+    
+    // Datos simulados de balance de los últimos 6 meses
+    const ingresosPoints = <FlSpot>[
+      FlSpot(0, 4.2),
+      FlSpot(1, 4.5),
+      FlSpot(2, 4.3),
+      FlSpot(3, 4.8),
+      FlSpot(4, 5.1),
+      FlSpot(5, 4.9),
+    ];
+    
+    const gastosPoints = <FlSpot>[
+      FlSpot(0, 2.8),
+      FlSpot(1, 3.1),
+      FlSpot(2, 2.9),
+      FlSpot(3, 3.3),
+      FlSpot(4, 3.0),
+      FlSpot(5, 3.2),
     ];
 
     return LineChart(
       LineChartData(
-        gridData: const FlGridData(show: true),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(
@@ -3557,20 +4199,29 @@ class _VentasLineChart extends StatelessWidget {
           rightTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: true, reservedSize: 34),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '\$${value.toStringAsFixed(1)}K',
+                  style: const TextStyle(fontSize: 11),
+                );
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               interval: 1,
               getTitlesWidget: (v, meta) {
-                const labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+                const labels = ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene'];
                 final i = v.toInt();
                 if (i < 0 || i >= labels.length) return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(labels[i], style: const TextStyle(fontSize: 12)),
+                  child: Text(labels[i], style: const TextStyle(fontSize: 11)),
                 );
               },
             ),
@@ -3578,37 +4229,70 @@ class _VentasLineChart extends StatelessWidget {
         ),
         lineBarsData: [
           LineChartBarData(
-            spots: points,
+            spots: ingresosPoints,
             isCurved: true,
             barWidth: 3,
             color: colorScheme.primary,
-            dotData: const FlDotData(show: false),
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 3,
+                  color: colorScheme.primary,
+                  strokeWidth: 1,
+                  strokeColor: Colors.white,
+                );
+              },
+            ),
             belowBarData: BarAreaData(
               show: true,
-              color: colorScheme.primary.withOpacity(0.12),
+              color: colorScheme.primary.withOpacity(0.1),
+            ),
+          ),
+          LineChartBarData(
+            spots: gastosPoints,
+            isCurved: true,
+            barWidth: 3,
+            color: colorScheme.error,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 3,
+                  color: colorScheme.error,
+                  strokeWidth: 1,
+                  strokeColor: Colors.white,
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: colorScheme.error.withOpacity(0.1),
             ),
           ),
         ],
-        minY: 1.6,
-        maxY: 4.0,
+        minY: 2.0,
+        maxY: 6.0,
       ),
     );
   }
 }
 
-class _ComprasBarChart extends StatelessWidget {
-  const _ComprasBarChart();
+class _DistribucionGastosChart extends StatelessWidget {
+  const _DistribucionGastosChart();
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
     BarChartGroupData bar(int x, double y, Color color) {
       return BarChartGroupData(
         x: x,
         barRods: [
           BarChartRodData(
             toY: y,
-            width: 18,
-            borderRadius: BorderRadius.circular(6),
+            width: 22,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
             color: color,
           ),
         ],
@@ -3616,16 +4300,17 @@ class _ComprasBarChart extends StatelessWidget {
     }
 
     final groups = <BarChartGroupData>[
-      bar(0, 5.5, const Color(0xFF1565C0)),
-      bar(1, 4.2, const Color(0xFF6A1B9A)),
-      bar(2, 3.3, const Color(0xFF2E7D32)),
-      bar(3, 2.4, const Color(0xFFEF6C00)),
+      bar(0, 1.2, colorScheme.primary),
+      bar(1, 0.8, colorScheme.secondary),
+      bar(2, 1.5, colorScheme.tertiary),
+      bar(3, 0.6, colorScheme.error.withOpacity(0.7)),
+      bar(4, 0.4, const Color(0xFFEF6C00)),
     ];
 
     return BarChart(
       BarChartData(
         borderData: FlBorderData(show: false),
-        gridData: const FlGridData(show: true),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
@@ -3633,26 +4318,35 @@ class _ComprasBarChart extends StatelessWidget {
           rightTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: true, reservedSize: 34),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '\$${value.toStringAsFixed(1)}K',
+                  style: const TextStyle(fontSize: 11),
+                );
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (v, meta) {
-                const labels = ['Móvil', 'Hogar', 'Alim', 'Otros'];
+                const labels = ['Hogar', 'Trans', 'Alim', 'Serv', 'Otros'];
                 final i = v.toInt();
                 if (i < 0 || i >= labels.length) return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(labels[i], style: const TextStyle(fontSize: 12)),
+                  child: Text(labels[i], style: const TextStyle(fontSize: 11)),
                 );
               },
             ),
           ),
         ),
         barGroups: groups,
-        maxY: 6.0,
+        maxY: 2.0,
       ),
     );
   }
@@ -4024,9 +4718,11 @@ class _ComparacionIngresosBarChart extends StatelessWidget {
 class _TendenciaComparacionChart extends StatelessWidget {
   const _TendenciaComparacionChart({
     required this.presupuesto,
+    required this.ingresosReales,
   });
 
   final double presupuesto;
+  final double ingresosReales;
 
   @override
   Widget build(BuildContext context) {
@@ -4035,13 +4731,16 @@ class _TendenciaComparacionChart extends StatelessWidget {
     // Datos simulados de los últimos 6 meses
     final meses = ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene'];
     final presupuestoData = List.generate(6, (_) => presupuesto);
+    
+    // Simulamos variación alrededor de los ingresos reales actuales
+    final baseReal = ingresosReales > 0 ? ingresosReales : presupuesto * 0.85;
     final ingresosRealesData = [
-      presupuesto * 0.75,
-      presupuesto * 0.82,
-      presupuesto * 0.88,
-      presupuesto * 0.85,
-      presupuesto * 0.92,
-      presupuesto * 0.85,
+      baseReal * 0.88,
+      baseReal * 0.96,
+      baseReal * 1.03,
+      baseReal * 0.98,
+      baseReal * 1.08,
+      baseReal,
     ];
 
     final maxValue = presupuesto * 1.1;
@@ -4193,4 +4892,669 @@ String _moneyShort(double value) {
     return '\$${(value / 1000).toStringAsFixed(0)}K';
   }
   return '\$${value.toStringAsFixed(0)}';
+}
+
+class _ComparacionPresupuestoRealChart extends StatelessWidget {
+  const _ComparacionPresupuestoRealChart({
+    required this.presupuestoIngresos,
+    required this.ingresosReales,
+    required this.presupuestoGastos,
+  });
+
+  final double presupuestoIngresos;
+  final double ingresosReales;
+  final double presupuestoGastos;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    // Simulamos gastos reales como un porcentaje de los gastos presupuestados
+    final gastosReales = presupuestoGastos * 0.92;
+    
+    final maxValue = [presupuestoIngresos, ingresosReales, presupuestoGastos, gastosReales]
+        .reduce((a, b) => a > b ? a : b);
+    final displayMax = maxValue * 1.25;
+
+    final balancePresupuesto = presupuestoIngresos - presupuestoGastos;
+    final balanceReal = ingresosReales - gastosReales;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: displayMax,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      String label;
+                      if (groupIndex == 0) {
+                        label = rodIndex == 0 ? 'Ingresos\nPresupuesto' : 'Ingresos\nReales';
+                      } else {
+                        label = rodIndex == 0 ? 'Gastos\nPresupuesto' : 'Gastos\nReales';
+                      }
+                      return BarTooltipItem(
+                        '$label\n${_money(rod.toY)}',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final labels = ['Ingresos', 'Gastos'];
+                        if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              labels[value.toInt()],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  BarChartGroupData(
+                    x: 0,
+                    barsSpace: 4,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuestoIngresos,
+                        width: 28,
+                        color: scheme.primary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: ingresosReales,
+                        width: 28,
+                        color: scheme.tertiary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  BarChartGroupData(
+                    x: 1,
+                    barsSpace: 4,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuestoGastos,
+                        width: 28,
+                        color: scheme.error.withOpacity(0.7),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: gastosReales,
+                        width: 28,
+                        color: scheme.error,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _LegendDot(color: scheme.primary, label: 'Presupuesto'),
+              _LegendDot(color: scheme.tertiary, label: 'Ingresos Reales'),
+              _LegendDot(color: scheme.error.withOpacity(0.7), label: 'Gastos Presup.'),
+              _LegendDot(color: scheme.error, label: 'Gastos Reales'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Balance Presupuesto',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _money(balancePresupuesto),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          color: balancePresupuesto >= 0
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: balanceReal >= 0
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Balance Real',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _money(balanceReal),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          color: balanceReal >= 0
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: [
+                    Text(
+                      'Ingresos: ${((ingresosReales / presupuestoIngresos) * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                    Text(
+                      ingresosReales >= presupuestoIngresos ? '✓ Cumplido' : '⚠ Pendiente',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: ingresosReales >= presupuestoIngresos
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: Colors.grey.withOpacity(0.3),
+                ),
+                Column(
+                  children: [
+                    Text(
+                      'Gastos: ${((gastosReales / presupuestoGastos) * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                    Text(
+                      gastosReales <= presupuestoGastos ? '✓ Bajo control' : '⚠ Excedido',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: gastosReales <= presupuestoGastos
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComparacionMensualChart extends StatelessWidget {
+  const _ComparacionMensualChart({
+    required this.presupuestoIngresos,
+    required this.presupuestoGastos,
+    required this.ingresosReales,
+    required this.gastosReales,
+  });
+
+  final double presupuestoIngresos;
+  final double presupuestoGastos;
+  final double ingresosReales;
+  final double gastosReales;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final maxValue = [presupuestoIngresos, presupuestoGastos, ingresosReales, gastosReales]
+        .reduce((a, b) => a > b ? a : b);
+    final displayMax = maxValue * 1.2;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: displayMax,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      String label;
+                      if (groupIndex == 0) {
+                        label = rodIndex == 0 ? 'Presupuesto' : 'Real';
+                      } else {
+                        label = rodIndex == 0 ? 'Presupuesto' : 'Real';
+                      }
+                      return BarTooltipItem(
+                        '$label\n${_money(rod.toY)}',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final labels = ['Ingresos', 'Gastos'];
+                        if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              labels[value.toInt()],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  BarChartGroupData(
+                    x: 0,
+                    barsSpace: 4,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuestoIngresos,
+                        width: 28,
+                        color: scheme.primary.withOpacity(0.6),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: ingresosReales,
+                        width: 28,
+                        color: scheme.primary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  BarChartGroupData(
+                    x: 1,
+                    barsSpace: 4,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuestoGastos,
+                        width: 28,
+                        color: scheme.error.withOpacity(0.6),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: gastosReales,
+                        width: 28,
+                        color: scheme.error,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _LegendDot(color: scheme.primary.withOpacity(0.6), label: 'Presupuesto'),
+              _LegendDot(color: scheme.primary, label: 'Real'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EvolucionAnualChart extends StatelessWidget {
+  const _EvolucionAnualChart({
+    required this.datosAnuales,
+    required this.presupuestoIngresos,
+    required this.presupuestoGastos,
+  });
+
+  final List<Map<String, dynamic>> datosAnuales;
+  final double presupuestoIngresos;
+  final double presupuestoGastos;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    final ingresosRealesSpots = datosAnuales
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value['ingresos']))
+        .toList();
+    
+    final gastosRealesSpots = datosAnuales
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value['gastos']))
+        .toList();
+    
+    final presupuestoIngresosSpots = List.generate(
+      12,
+      (i) => FlSpot(i.toDouble(), presupuestoIngresos),
+    );
+    
+    final presupuestoGastosSpots = List.generate(
+      12,
+      (i) => FlSpot(i.toDouble(), presupuestoGastos),
+    );
+
+    final maxValue = [
+      presupuestoIngresos,
+      presupuestoGastos,
+      ...datosAnuales.map((d) => d['ingresos'] as double),
+      ...datosAnuales.map((d) => d['gastos'] as double),
+    ].reduce((a, b) => a > b ? a : b);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                maxY: maxValue * 1.1,
+                minY: 0,
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                                      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                        final mes = meses[spot.x.toInt()];
+                        String label;
+                        if (spot.barIndex == 0) label = 'Ing. Presup.';
+                        else if (spot.barIndex == 1) label = 'Ing. Real';
+                        else if (spot.barIndex == 2) label = 'Gast. Presup.';
+                        else label = 'Gast. Real';
+                        
+                        return LineTooltipItem(
+                          '$label\n$mes: ${_money(spot.y)}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        const meses = ['E', 'F', 'M', 'A', 'M', 'J',
+                                      'J', 'A', 'S', 'O', 'N', 'D'];
+                        if (value.toInt() >= 0 && value.toInt() < meses.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              meses[value.toInt()],
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: presupuestoIngresosSpots,
+                    isCurved: false,
+                    color: scheme.primary.withOpacity(0.4),
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    dashArray: [5, 5],
+                  ),
+                  LineChartBarData(
+                    spots: ingresosRealesSpots,
+                    isCurved: true,
+                    color: scheme.primary,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 3,
+                          color: scheme.primary,
+                          strokeWidth: 1,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: scheme.primary.withOpacity(0.1),
+                    ),
+                  ),
+                  LineChartBarData(
+                    spots: presupuestoGastosSpots,
+                    isCurved: false,
+                    color: scheme.error.withOpacity(0.4),
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    dashArray: [5, 5],
+                  ),
+                  LineChartBarData(
+                    spots: gastosRealesSpots,
+                    isCurved: true,
+                    color: scheme.error,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 3,
+                          color: scheme.error,
+                          strokeWidth: 1,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: scheme.error.withOpacity(0.1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _LegendDot(color: scheme.primary.withOpacity(0.4), label: 'Ing. Presup.'),
+              _LegendDot(color: scheme.primary, label: 'Ing. Real'),
+              _LegendDot(color: scheme.error.withOpacity(0.4), label: 'Gast. Presup.'),
+              _LegendDot(color: scheme.error, label: 'Gast. Real'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
