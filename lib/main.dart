@@ -588,6 +588,7 @@ class _GastosGroupedCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ListView.separated(
+              key: ValueKey('gastos-grouped-${categories.length}'),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: categories.length,
@@ -600,6 +601,7 @@ class _GastosGroupedCard extends StatelessWidget {
                   (sum, e) => sum + e.value.monto,
                 );
                 return Container(
+                  key: ValueKey('grouped-cat-$cat'),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -738,7 +740,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _verificarDeudasHoy();
   }
 
-  final List<_IngresoMensual> _ingresos = [
+  // Datos de PRESUPUESTO (estimaciones mensuales)
+  final List<_IngresoMensual> _ingresosPresupuesto = [];
+
+  final List<_GastoMensual> _gastosPresupuesto = [];
+
+  // Datos REALES de OPERACIONES (ingresos y gastos reales por mes)
+  final List<_IngresoMensual> _ingresosReales = [
+    // Marzo 2026 (mes actual)
+    _IngresoMensual(
+      etiqueta: 'Salario mensual',
+      tipo: _IngresoTipo.fija,
+      monto: 1200,
+      mes: DateTime(2026, 3, 15),
+    ),
+    _IngresoMensual(
+      etiqueta: 'Freelance',
+      tipo: _IngresoTipo.variable,
+      monto: 450,
+      mes: DateTime(2026, 3, 20),
+    ),
     // Enero 2026
     _IngresoMensual(
       etiqueta: 'Salario mensual',
@@ -787,14 +808,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
-  final List<String> _categoriasGasto = [
-    'Hogar',
-    'Transporte',
-    'Alimentación',
-    'Familia',
-  ];
-
-  final List<_GastoMensual> _gastos = [
+  final List<_GastoMensual> _gastosReales = [
+    // Marzo 2026 (mes actual)
+    _GastoMensual(
+      categoria: 'Hogar',
+      subCategoria: 'Internet',
+      monto: 45,
+      esFijo: true,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2026, 3, 5),
+    ),
+    _GastoMensual(
+      categoria: 'Transporte',
+      subCategoria: 'Gasolina',
+      monto: 90,
+      esFijo: false,
+      pagoConTarjeta: false,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2026, 3, 10),
+    ),
+    _GastoMensual(
+      categoria: 'Alimentación',
+      subCategoria: 'Supermercado',
+      monto: 350,
+      esFijo: false,
+      pagoConTarjeta: true,
+      gastoHormiga: false,
+      periodicidad: _GastoPeriodicidad.mensual,
+      mes: DateTime(2026, 3, 12),
+    ),
     // Enero 2026
     _GastoMensual(
       categoria: 'Hogar',
@@ -931,6 +976,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
+  final List<String> _categoriasGasto = [
+    'Hogar',
+    'Transporte',
+    'Alimentación',
+    'Familia',
+  ];
+
   final List<_Deuda> _deudas = [
     _Deuda(
       nombre: 'Juan Pérez',
@@ -984,7 +1036,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
-  double get _totalIngresos => _ingresos.fold(0, (sum, it) => sum + it.monto);
+  // Totales de ingresos y gastos REALES (de Operaciones - TODOS los meses)
+  double get _totalIngresosReales => _ingresosReales.fold(0, (sum, it) => sum + it.monto);
+
+  double get _totalGastosReales => _gastosReales.fold(0, (sum, it) => sum + it.monto);
+
+  // Ingresos y gastos reales del mes actual (de Operaciones)
+  double get _ingresosRealesMesActual {
+    final ahora = DateTime.now();
+    return _ingresosReales
+        .where((i) => i.mes.year == ahora.year && i.mes.month == ahora.month)
+        .fold(0.0, (sum, i) => sum + i.monto);
+  }
+
+  double get _gastosRealesMesActual {
+    final ahora = DateTime.now();
+    return _gastosReales
+        .where((g) => g.mes.year == ahora.year && g.mes.month == ahora.month)
+        .fold(0.0, (sum, g) => sum + g.monto);
+  }
+
+  // Totales de presupuesto
+  double get _totalPresupuestoIngresos => _ingresosPresupuesto.fold(0, (sum, it) => sum + it.monto);
+
+  double get _totalPresupuestoGastos => _gastosPresupuesto.fold(0, (sum, it) => sum + it.monto);
 
   double get _totalDeudasPorPagar => _deudas
       .where((d) => d.tipo == _TipoDeuda.porPagar)
@@ -1274,49 +1349,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Future<void> _addIngreso() async {
+  // ========== FUNCIONES PARA PRESUPUESTO ==========
+  Future<void> _addIngresoPresupuesto() async {
     final result = await _openIngresoModal(context);
     if (!mounted || result == null) return;
-    setState(() => _ingresos.add(result));
+    setState(() => _ingresosPresupuesto.add(result));
   }
 
-  Future<void> _editIngreso(int index) async {
-    final result = await _openIngresoModal(context, initial: _ingresos[index]);
+  Future<void> _editIngresoPresupuesto(int index) async {
+    final result = await _openIngresoModal(context, initial: _ingresosPresupuesto[index]);
     if (!mounted || result == null) return;
-    setState(() => _ingresos[index] = result);
+    setState(() => _ingresosPresupuesto[index] = result);
   }
 
-  void _deleteIngreso(int index) {
-    setState(() => _ingresos.removeAt(index));
+  void _deleteIngresoPresupuesto(int index) {
+    setState(() => _ingresosPresupuesto.removeAt(index));
   }
 
-  Future<void> _addGasto() async {
-    final result = await _openGastoModal(context);
+  Future<void> _editGastoPresupuesto(int index) async {
+    final result = await _openGastoModal(context, initial: _gastosPresupuesto[index]);
     if (!mounted || result == null) return;
-    setState(() => _gastos.add(result));
+    setState(() => _gastosPresupuesto[index] = result);
   }
 
-  Future<void> _editGasto(int index) async {
-    final result = await _openGastoModal(context, initial: _gastos[index]);
-    if (!mounted || result == null) return;
-    setState(() => _gastos[index] = result);
-  }
-
-  void _deleteGasto(int index) {
-    setState(() => _gastos.removeAt(index));
-  }
-
-  Future<void> _deleteGastoConfirmed(int index) async {
+  Future<void> _deleteGastoPresupuesto(int index) async {
     final ok = await _confirmDeleteGasto(context);
     if (ok != true) return;
     if (!mounted) return;
-    _deleteGasto(index);
+    setState(() => _gastosPresupuesto.removeAt(index));
   }
+
+  // ========== FUNCIONES PARA OPERACIONES (REALES) ==========
+  Future<void> _addIngresoReal() async {
+    final result = await _openIngresoModal(context);
+    if (!mounted || result == null) return;
+    setState(() => _ingresosReales.add(result));
+  }
+
+  Future<void> _editIngresoReal(int index) async {
+    final result = await _openIngresoModal(context, initial: _ingresosReales[index]);
+    if (!mounted || result == null) return;
+    setState(() => _ingresosReales[index] = result);
+  }
+
+  void _deleteIngresoReal(int index) {
+    setState(() => _ingresosReales.removeAt(index));
+  }
+
+  Future<void> _addGastoReal() async {
+    final result = await _openGastoModal(context);
+    if (!mounted || result == null) return;
+    setState(() => _gastosReales.add(result));
+  }
+
+  Future<void> _editGastoReal(int index) async {
+    final result = await _openGastoModal(context, initial: _gastosReales[index]);
+    if (!mounted || result == null) return;
+    setState(() => _gastosReales[index] = result);
+  }
+
+  void _deleteGastoReal(int index) {
+    setState(() => _gastosReales.removeAt(index));
+  }
+
+  // ========== FUNCIONES COMPARTIDAS ==========
 
   Future<void> _addGastosToCategoria(String categoria) async {
     final result = await _openMultiGastoModal(context, categoria: categoria);
     if (!mounted || result == null || result.isEmpty) return;
-    setState(() => _gastos.addAll(result));
+    setState(() => _gastosPresupuesto.addAll(result));
+  }
+
+  Future<void> _addGastosCategoriaReal(String categoria) async {
+    final result = await _openMultiGastoModal(context, categoria: categoria);
+    if (!mounted || result == null || result.isEmpty) return;
+    setState(() => _gastosReales.addAll(result));
   }
 
   Future<void> _addCategoriaGasto() async {
@@ -1337,7 +1444,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
     setState(() {
       _categoriasGasto.remove(categoria);
-      _gastos.removeWhere((g) => g.categoria == categoria);
+      _gastosPresupuesto.removeWhere((g) => g.categoria == categoria);
+      _gastosReales.removeWhere((g) => g.categoria == categoria);
     });
   }
 
@@ -1345,15 +1453,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _IngresosMensualesScreen(
-          items: _ingresos,
-          gastos: _gastos,
-          onAdd: _addIngreso,
-          onEdit: _editIngreso,
-          onDelete: _deleteIngreso,
-          onAddGasto: _addGasto,
-          onEditGasto: _editGasto,
-          onDeleteGasto: _deleteGasto,
-          onAddGastosCategoria: _addGastosToCategoria,
+          items: _ingresosReales,
+          gastos: _gastosReales,
+          onAdd: _addIngresoReal,
+          onEdit: _editIngresoReal,
+          onDelete: _deleteIngresoReal,
+          onAddGasto: _addGastoReal,
+          onEditGasto: _editGastoReal,
+          onDeleteGasto: _deleteGastoReal,
+          onAddGastosCategoria: _addGastosCategoriaReal,
         ),
       ),
     );
@@ -1363,39 +1471,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final views = [
       _ResumenTab(
-        totalIngresos: _totalIngresos,
-        ingresos: _ingresos,
-        gastos: _gastos,
+        totalIngresos: _totalIngresosReales,
+        ingresos: _ingresosReales,
+        gastos: _gastosReales,
         onOpenIngresos: _openIngresosScreen,
       ),
       _PresupuestoTab(
-        ingresos: _ingresos,
-        gastos: _gastos,
-        ingresosReales: _totalIngresos,
+        ingresos: _ingresosPresupuesto,
+        gastos: _gastosPresupuesto,
+        ingresosReales: _totalIngresosReales,
+        gastosReales: _totalGastosReales,
         categorias: _categoriasGasto,
-        onAddIngreso: _addIngreso,
-        onEditIngreso: _editIngreso,
-        onDeleteIngreso: _deleteIngreso,
+        onAddIngreso: _addIngresoPresupuesto,
+        onEditIngreso: _editIngresoPresupuesto,
+        onDeleteIngreso: _deleteIngresoPresupuesto,
         onAddCategoria: _addCategoriaGasto,
         onDeleteCategoria: _deleteCategoriaGasto,
         onAddToCategoria: _addGastosToCategoria,
-        onEditGasto: _editGasto,
-        onDeleteGasto: _deleteGastoConfirmed,
+        onEditGasto: _editGastoPresupuesto,
+        onDeleteGasto: _deleteGastoPresupuesto,
       ),
       _IngresosMensualesTab(
-        items: _ingresos,
-        gastos: _gastos,
-        onAdd: _addIngreso,
-        onEdit: _editIngreso,
-        onDelete: _deleteIngreso,
-        onAddGasto: _addGasto,
-        onEditGasto: _editGasto,
-        onDeleteGasto: _deleteGasto,
-        onAddGastosCategoria: _addGastosToCategoria,
+        items: _ingresosReales,
+        gastos: _gastosReales,
+        onAdd: _addIngresoReal,
+        onEdit: _editIngresoReal,
+        onDelete: _deleteIngresoReal,
+        onAddGasto: _addGastoReal,
+        onEditGasto: _editGastoReal,
+        onDeleteGasto: _deleteGastoReal,
+        onAddGastosCategoria: _addGastosCategoriaReal,
       ),
       _EstadisticasTab(
-        ingresos: _ingresos,
-        gastos: _gastos,
+        key: const ValueKey('estadisticas-tab'),
+        ingresos: _ingresosReales,
+        gastos: _gastosReales,
+        ingresosPresupuesto: _ingresosPresupuesto,
+        gastosPresupuesto: _gastosPresupuesto,
       ),
       _PerfilTab(
         onLogout: () {
@@ -1524,11 +1636,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _PresupuestoTab extends StatelessWidget {
+class _PresupuestoTab extends StatefulWidget {
   const _PresupuestoTab({
     required this.ingresos,
     required this.gastos,
     required this.ingresosReales,
+    required this.gastosReales,
     required this.categorias,
     required this.onAddIngreso,
     required this.onEditIngreso,
@@ -1543,6 +1656,7 @@ class _PresupuestoTab extends StatelessWidget {
   final List<_IngresoMensual> ingresos;
   final List<_GastoMensual> gastos;
   final double ingresosReales;
+  final double gastosReales;
   final List<String> categorias;
   final Future<void> Function() onAddIngreso;
   final Future<void> Function(int index) onEditIngreso;
@@ -1554,81 +1668,128 @@ class _PresupuestoTab extends StatelessWidget {
   final Future<void> Function(int index) onDeleteGasto;
 
   @override
+  State<_PresupuestoTab> createState() => _PresupuestoTabState();
+}
+
+class _PresupuestoTabState extends State<_PresupuestoTab> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final totalIngresos = widget.ingresos.fold(0.0, (sum, it) => sum + it.monto);
+    final totalGastos = widget.gastos.fold(0.0, (sum, it) => sum + it.monto);
+    final balance = totalIngresos - totalGastos;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [scheme.secondary, scheme.secondary.withOpacity(0.82)],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Presupuesto mensual',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _money(balance),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Ingresos: ${_money(totalIngresos)}  •  Gastos: ${_money(totalGastos)}',
+                style: TextStyle(color: Colors.white.withOpacity(0.9)),
+              ),
+            ],
+          ),
+        ),
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Ingresos', icon: Icon(Icons.attach_money)),
+            Tab(text: 'Gastos', icon: Icon(Icons.shopping_bag_outlined)),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _IngresosPresupuestoView(
+                ingresos: widget.ingresos,
+                ingresosReales: widget.ingresosReales,
+                onAdd: widget.onAddIngreso,
+                onEdit: widget.onEditIngreso,
+                onDelete: widget.onDeleteIngreso,
+              ),
+              _GastosPresupuestoView(
+                gastos: widget.gastos,
+                gastosReales: widget.gastosReales,
+                categorias: widget.categorias,
+                onAddCategoria: widget.onAddCategoria,
+                onDeleteCategoria: widget.onDeleteCategoria,
+                onAddToCategoria: widget.onAddToCategoria,
+                onEditGasto: widget.onEditGasto,
+                onDeleteGasto: widget.onDeleteGasto,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IngresosPresupuestoView extends StatelessWidget {
+  const _IngresosPresupuestoView({
+    required this.ingresos,
+    required this.ingresosReales,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<_IngresoMensual> ingresos;
+  final double ingresosReales;
+  final Future<void> Function() onAdd;
+  final Future<void> Function(int index) onEdit;
+  final void Function(int index) onDelete;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final totalIngresos = ingresos.fold(0.0, (sum, it) => sum + it.monto);
-    final totalGastos = gastos.fold(0.0, (sum, it) => sum + it.monto);
-    final balance = totalIngresos - totalGastos;
-
-    final baseMax = totalIngresos > totalGastos ? totalIngresos : totalGastos;
-    final chartGap = (baseMax * 0.02).clamp(4.0, 22.0);
-    final displayIngresosTotal = totalIngresos + chartGap;
-    final displayGastosTotal = totalGastos + (chartGap * 2);
-    final displayMax = displayIngresosTotal > displayGastosTotal
-        ? displayIngresosTotal
-        : displayGastosTotal;
-
-    final ingresosFijos = ingresos
-        .where((i) => i.tipo == _IngresoTipo.fija)
-        .fold(0.0, (sum, it) => sum + it.monto);
-    final ingresosVariables = ingresos
-        .where((i) => i.tipo != _IngresoTipo.fija)
-        .fold(0.0, (sum, it) => sum + it.monto);
-
-    final gastosHormiga = gastos
-        .where((g) => g.gastoHormiga)
-        .fold(0.0, (sum, it) => sum + it.monto);
-    final gastosFijos = gastos
-        .where((g) => g.esFijo && !g.gastoHormiga)
-        .fold(0.0, (sum, it) => sum + it.monto);
-    final gastosVariables = gastos
-        .where((g) => !g.esFijo && !g.gastoHormiga)
-        .fold(0.0, (sum, it) => sum + it.monto);
-
-    final cats = {...categorias, ...gastos.map((g) => g.categoria)}.toList()
-      ..sort();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                colors: [scheme.secondary, scheme.secondary.withOpacity(0.82)],
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Presupuesto mensual',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _money(balance),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Ingresos: ${_money(totalIngresos)}  •  Gastos: ${_money(totalGastos)}',
-                  style: TextStyle(color: Colors.white.withOpacity(0.9)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1640,14 +1801,13 @@ class _PresupuestoTab extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Ingresos Presupuestados',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w900),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                       FilledButton.tonalIcon(
-                        onPressed: onAddIngreso,
+                        onPressed: onAdd,
                         icon: const Icon(Icons.add),
                         label: const Text('Ingreso'),
                       ),
@@ -1718,14 +1878,14 @@ class _PresupuestoTab extends StatelessWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        onPressed: () => onEditIngreso(i),
+                                        onPressed: () => onEdit(i),
                                         icon: const Icon(Icons.edit_outlined),
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
                                       ),
                                       const SizedBox(width: 8),
                                       IconButton(
-                                        onPressed: () => onDeleteIngreso(i),
+                                        onPressed: () => onDelete(i),
                                         icon: const Icon(Icons.delete_outline),
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
@@ -1745,338 +1905,15 @@ class _PresupuestoTab extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _CardSection(
-            title: 'Distribución de Ingresos Presupuestados',
+            title: 'Distribución de Ingresos',
             child: SizedBox(
               height: 200,
               child: _DistribucionIngresosChart(ingresos: ingresos),
             ),
           ),
           const SizedBox(height: 14),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Ingresos vs Gastos',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 210,
-                    child: BarChart(
-                      swapAnimationDuration: const Duration(milliseconds: 320),
-                      swapAnimationCurve: Curves.easeOutCubic,
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: displayMax * 1.15,
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: (displayMax / 4).clamp(
-                            1,
-                            double.infinity,
-                          ),
-                          getDrawingHorizontalLine: (value) {
-                            return FlLine(
-                              color: Colors.black.withOpacity(0.06),
-                              strokeWidth: 1,
-                            );
-                          },
-                        ),
-                        borderData: FlBorderData(
-                          show: true,
-                          border: const Border(
-                            left: BorderSide(color: Colors.black, width: 1.2),
-                            bottom: BorderSide(color: Colors.black, width: 1.2),
-                            top: BorderSide(color: Colors.black, width: 1.2),
-                            right: BorderSide(color: Colors.black, width: 1.2),
-                          ),
-                        ),
-                        titlesData: FlTitlesData(
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 44,
-                              interval: (displayMax / 4).clamp(
-                                1,
-                                double.infinity,
-                              ),
-                              getTitlesWidget: (value, meta) {
-                                String fmt(double v) {
-                                  if (v >= 1000000) {
-                                    return '${(v / 1000000).toStringAsFixed(1)}M';
-                                  }
-                                  if (v >= 1000) {
-                                    return '${(v / 1000).toStringAsFixed(1)}k';
-                                  }
-                                  return v.toStringAsFixed(0);
-                                }
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: Text(
-                                    fmt(value),
-                                    style: const TextStyle(
-                                      color: Colors.black54,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                final label = value.toInt() == 0
-                                    ? 'Ingresos'
-                                    : 'Gastos';
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: Text(
-                                    label,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        barTouchData: BarTouchData(
-                          enabled: true,
-                          handleBuiltInTouches: true,
-                          touchTooltipData: BarTouchTooltipData(
-                            tooltipRoundedRadius: 12,
-                            tooltipPadding: const EdgeInsets.all(10),
-                            tooltipMargin: 8,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              if (group.x == 0) {
-                                return BarTooltipItem(
-                                  'Ingresos\n',
-                                  const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.black,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Fijo: ${_money(ingresosFijos)}\n',
-                                      style: TextStyle(
-                                        color: scheme.primary,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text:
-                                          'Variable: ${_money(ingresosVariables)}\n',
-                                      style: TextStyle(
-                                        color: scheme.tertiary,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: 'Total: ${_money(totalIngresos)}',
-                                      style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-
-                              return BarTooltipItem(
-                                'Gastos\n',
-                                const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.black,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: 'Fijo: ${_money(gastosFijos)}\n',
-                                    style: TextStyle(
-                                      color: scheme.error,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        'Variable: ${_money(gastosVariables)}\n',
-                                    style: TextStyle(
-                                      color: scheme.error.withOpacity(0.75),
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Hormiga: ${_money(gastosHormiga)}\n',
-                                    style: TextStyle(
-                                      color: scheme.tertiary.withOpacity(0.9),
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Total: ${_money(totalGastos)}',
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                        barGroups: [
-                          BarChartGroupData(
-                            x: 0,
-                            barRods: [
-                              BarChartRodData(
-                                toY: displayIngresosTotal,
-                                width: 28,
-                                borderRadius: BorderRadius.zero,
-                                borderSide: const BorderSide(
-                                  color: Colors.black,
-                                  width: 1,
-                                ),
-                                backDrawRodData: BackgroundBarChartRodData(
-                                  show: true,
-                                  toY: displayMax * 1.15,
-                                  color: Colors.black.withOpacity(0.03),
-                                ),
-                                rodStackItems: [
-                                  BarChartRodStackItem(
-                                    0,
-                                    ingresosFijos,
-                                    scheme.primary,
-                                  ),
-                                  BarChartRodStackItem(
-                                    ingresosFijos,
-                                    ingresosFijos + chartGap,
-                                    Colors.black,
-                                  ),
-                                  BarChartRodStackItem(
-                                    ingresosFijos + chartGap,
-                                    ingresosFijos +
-                                        chartGap +
-                                        ingresosVariables,
-                                    scheme.tertiary,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          BarChartGroupData(
-                            x: 1,
-                            barRods: [
-                              BarChartRodData(
-                                toY: displayGastosTotal,
-                                width: 28,
-                                borderRadius: BorderRadius.zero,
-                                borderSide: const BorderSide(
-                                  color: Colors.black,
-                                  width: 1,
-                                ),
-                                backDrawRodData: BackgroundBarChartRodData(
-                                  show: true,
-                                  toY: displayMax * 1.15,
-                                  color: Colors.black.withOpacity(0.03),
-                                ),
-                                rodStackItems: [
-                                  BarChartRodStackItem(
-                                    0,
-                                    gastosFijos,
-                                    scheme.error,
-                                  ),
-                                  BarChartRodStackItem(
-                                    gastosFijos,
-                                    gastosFijos + chartGap,
-                                    Colors.black,
-                                  ),
-                                  BarChartRodStackItem(
-                                    gastosFijos + chartGap,
-                                    gastosFijos + chartGap + gastosVariables,
-                                    scheme.error.withOpacity(0.65),
-                                  ),
-                                  BarChartRodStackItem(
-                                    gastosFijos + chartGap + gastosVariables,
-                                    gastosFijos +
-                                        (chartGap * 2) +
-                                        gastosVariables,
-                                    Colors.black,
-                                  ),
-                                  BarChartRodStackItem(
-                                    gastosFijos +
-                                        (chartGap * 2) +
-                                        gastosVariables,
-                                    gastosFijos +
-                                        (chartGap * 2) +
-                                        gastosVariables +
-                                        gastosHormiga,
-                                    scheme.tertiary.withOpacity(0.85),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      _LegendDot(color: scheme.primary, label: 'Ingreso fijo'),
-                      _LegendDot(
-                        color: scheme.tertiary,
-                        label: 'Ingreso variable',
-                      ),
-                      _LegendDot(color: scheme.error, label: 'Gasto fijo'),
-                      _LegendDot(
-                        color: scheme.error.withOpacity(0.65),
-                        label: 'Gasto variable',
-                      ),
-                      _LegendDot(
-                        color: scheme.tertiary.withOpacity(0.85),
-                        label: 'Gasto hormiga',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: scheme.tertiary.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Text(
-                      'Cuidado con los gastos hormiga: son pequeños pero se acumulan. \nRevisa esta sección y reduce lo que no sea necesario.',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
           _CardSection(
-            title: 'Comparación: Presupuesto vs Ingresos Reales',
+            title: 'Comparación: Presupuesto vs Total Ingresos Reales',
             child: SizedBox(
               height: 280,
               child: _ComparacionIngresosBarChart(
@@ -2085,30 +1922,56 @@ class _PresupuestoTab extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          _CardSection(
-            title: 'Tendencia: Presupuesto vs Realidad',
-            child: SizedBox(
-              height: 240,
-              child: _TendenciaComparacionChart(
-                presupuesto: totalIngresos,
-                ingresosReales: ingresosReales,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          _CardSection(
-            title: 'Comparación: Presupuesto vs Realidad',
-            child: SizedBox(
-              height: 320,
-              child: _ComparacionPresupuestoRealChart(
-                presupuestoIngresos: totalIngresos,
-                ingresosReales: ingresosReales,
-                presupuestoGastos: totalGastos,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+}
+
+class _GastosPresupuestoView extends StatelessWidget {
+  const _GastosPresupuestoView({
+    required this.gastos,
+    required this.gastosReales,
+    required this.categorias,
+    required this.onAddCategoria,
+    required this.onDeleteCategoria,
+    required this.onAddToCategoria,
+    required this.onEditGasto,
+    required this.onDeleteGasto,
+  });
+
+  final List<_GastoMensual> gastos;
+  final double gastosReales;
+  final List<String> categorias;
+  final Future<void> Function() onAddCategoria;
+  final Future<void> Function(String categoria) onDeleteCategoria;
+  final Future<void> Function(String categoria) onAddToCategoria;
+  final Future<void> Function(int index) onEditGasto;
+  final Future<void> Function(int index) onDeleteGasto;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final totalGastos = gastos.fold(0.0, (sum, it) => sum + it.monto);
+    
+    final gastosHormiga = gastos
+        .where((g) => g.gastoHormiga)
+        .fold(0.0, (sum, it) => sum + it.monto);
+    final gastosFijos = gastos
+        .where((g) => g.esFijo && !g.gastoHormiga)
+        .fold(0.0, (sum, it) => sum + it.monto);
+    final gastosVariables = gastos
+        .where((g) => !g.esFijo && !g.gastoHormiga)
+        .fold(0.0, (sum, it) => sum + it.monto);
+
+    final cats = {...categorias, ...gastos.map((g) => g.categoria)}.toList()
+      ..sort();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -2120,10 +1983,9 @@ class _PresupuestoTab extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Detalle de gastos',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w900),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                       FilledButton.tonalIcon(
@@ -2133,11 +1995,21 @@ class _PresupuestoTab extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Total: ${_money(totalGastos)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.error,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   if (cats.isEmpty)
                     const Text('Agrega una categoría para comenzar.')
                   else
                     ListView.separated(
+                      key: ValueKey('gastos-list-${cats.length}'),
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: cats.length,
@@ -2156,6 +2028,7 @@ class _PresupuestoTab extends StatelessWidget {
                           (sum, e) => sum + e.value.monto,
                         );
                         return Container(
+                          key: ValueKey('cat-$cat'),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -2202,7 +2075,7 @@ class _PresupuestoTab extends StatelessWidget {
                               if (entries.isEmpty) ...[
                                 const SizedBox(height: 10),
                                 const Text(
-                                  'Sin gastos todavía. Usa “Agregar”.',
+                                  'Sin gastos todavía. Usa "Agregar".',
                                   style: TextStyle(color: Colors.black54),
                                 ),
                               ] else ...[
@@ -2301,6 +2174,29 @@ class _PresupuestoTab extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Distribución de Gastos',
+            child: SizedBox(
+              height: 200,
+              child: _DistribucionGastosPresupuestoChart(
+                gastosFijos: gastosFijos,
+                gastosVariables: gastosVariables,
+                gastosHormiga: gastosHormiga,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Comparación: Presupuesto vs Total Gastos Reales',
+            child: SizedBox(
+              height: 280,
+              child: _ComparacionGastosBarChart(
+                presupuesto: totalGastos,
+                gastosReales: gastosReales,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2332,12 +2228,17 @@ class _LegendDot extends StatelessWidget {
 
 class _EstadisticasTab extends StatefulWidget {
   const _EstadisticasTab({
+    super.key,
     required this.ingresos,
     required this.gastos,
+    required this.ingresosPresupuesto,
+    required this.gastosPresupuesto,
   });
 
   final List<_IngresoMensual> ingresos;
   final List<_GastoMensual> gastos;
+  final List<_IngresoMensual> ingresosPresupuesto;
+  final List<_GastoMensual> gastosPresupuesto;
 
   @override
   State<_EstadisticasTab> createState() => _EstadisticasTabState();
@@ -2406,14 +2307,22 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
       );
     }
 
-    if (_mesSeleccionado == null || !mesesDisponibles.any((m) =>
-        m.year == _mesSeleccionado!.year && m.month == _mesSeleccionado!.month)) {
-      _mesSeleccionado = mesesDisponibles.first;
+    // Validar el mes seleccionado y encontrar el mes exacto de la lista
+    DateTime mesActual;
+    if (_mesSeleccionado != null) {
+      // Buscar el mes en la lista que coincida con el seleccionado
+      final mesEncontrado = mesesDisponibles.firstWhere(
+        (m) => m.year == _mesSeleccionado!.year && m.month == _mesSeleccionado!.month,
+        orElse: () => mesesDisponibles.first,
+      );
+      mesActual = mesEncontrado;
+    } else {
+      mesActual = mesesDisponibles.first;
     }
 
-    // Presupuesto estimado (simulado)
-    const presupuestoIngresos = 1500.0;
-    const presupuestoGastos = 800.0;
+    // Presupuesto estimado (de la pestaña Presupuesto)
+    final presupuestoIngresos = widget.ingresosPresupuesto.fold(0.0, (sum, i) => sum + i.monto);
+    final presupuestoGastos = widget.gastosPresupuesto.fold(0.0, (sum, g) => sum + g.monto);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -2451,7 +2360,7 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
                   const SizedBox(height: 12),
                   if (!_verAnual) ...[
                     DropdownButtonFormField<DateTime>(
-                      value: _mesSeleccionado,
+                      value: mesActual,
                       decoration: const InputDecoration(
                         labelText: 'Seleccionar mes',
                         border: OutlineInputBorder(),
@@ -2470,7 +2379,7 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
                     ),
                   ] else ...[
                     DropdownButtonFormField<int>(
-                      value: _mesSeleccionado!.year,
+                      value: mesActual.year,
                       decoration: const InputDecoration(
                         labelText: 'Seleccionar año',
                         border: OutlineInputBorder(),
@@ -2503,14 +2412,14 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
           if (!_verAnual) ...[
             _buildComparacionMensual(
               scheme,
-              _mesSeleccionado!,
+              mesActual,
               presupuestoIngresos,
               presupuestoGastos,
             ),
           ] else ...[
             _buildComparacionAnual(
               scheme,
-              _mesSeleccionado!.year,
+              mesActual.year,
               presupuestoIngresos,
               presupuestoGastos,
             ),
@@ -3509,10 +3418,19 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final totalIngresos = widget.items.fold(0.0, (sum, it) => sum + it.monto);
-    final totalGastos = widget.gastos.fold(0.0, (sum, it) => sum + it.monto);
+    
+    // Filtrar solo el mes actual
+    final ahora = DateTime.now();
+    final ingresosDelMes = widget.items.where((i) => 
+        i.mes.year == ahora.year && i.mes.month == ahora.month).toList();
+    final gastosDelMes = widget.gastos.where((g) => 
+        g.mes.year == ahora.year && g.mes.month == ahora.month).toList();
+    
+    final totalIngresos = ingresosDelMes.fold(0.0, (sum, it) => sum + it.monto);
+    final totalGastos = gastosDelMes.fold(0.0, (sum, it) => sum + it.monto);
     final isIngresos = _mode == _MensualViewMode.ingresos;
     final total = isIngresos ? totalIngresos : totalGastos;
+    final items = isIngresos ? ingresosDelMes : gastosDelMes;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -3601,7 +3519,7 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
             ),
           ),
           const SizedBox(height: 14),
-          if (isIngresos && widget.items.isEmpty)
+          if (isIngresos && ingresosDelMes.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -3611,14 +3529,14 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        'Agrega tu primer ingreso para ver el balance.',
+                        'No hay ingresos registrados para este mes.',
                       ),
                     ),
                   ],
                 ),
               ),
             )
-          else if (!isIngresos && widget.gastos.isEmpty)
+          else if (!isIngresos && gastosDelMes.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -3628,7 +3546,7 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        'Agrega tu primer gasto para ver el total mensual.',
+                        'No hay gastos registrados para este mes.',
                       ),
                     ),
                   ],
@@ -3652,10 +3570,12 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
                     ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: widget.items.length,
+                      itemCount: ingresosDelMes.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
-                        final it = widget.items[i];
+                        final it = ingresosDelMes[i];
+                        // Encontrar el índice real en la lista completa
+                        final realIndex = widget.items.indexOf(it);
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -3722,12 +3642,12 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
                                     children: [
                                       IconButton(
                                         onPressed: () {
-                                          widget.onEdit(i);
+                                          widget.onEdit(realIndex);
                                         },
                                         icon: const Icon(Icons.edit_outlined),
                                       ),
                                       IconButton(
-                                        onPressed: () => widget.onDelete(i),
+                                        onPressed: () => widget.onDelete(realIndex),
                                         icon: const Icon(Icons.delete_outline),
                                       ),
                                     ],
@@ -5338,6 +5258,160 @@ class _ComparacionIngresosBarChart extends StatelessWidget {
                 color: (ingresosReales >= presupuesto)
                     ? Colors.green.shade800
                     : Colors.orange.shade800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComparacionGastosBarChart extends StatelessWidget {
+  const _ComparacionGastosBarChart({
+    required this.presupuesto,
+    required this.gastosReales,
+  });
+
+  final double presupuesto;
+  final double gastosReales;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final maxValue = presupuesto > gastosReales ? presupuesto : gastosReales;
+    final displayMax = maxValue * 1.2;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: displayMax,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final label = groupIndex == 0 ? 'Presupuesto' : 'Gastos Reales';
+                      return BarTooltipItem(
+                        '$label\n${_money(rod.toY)}',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final labels = ['Presupuesto', 'Reales'];
+                        if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              labels[value.toInt()],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  BarChartGroupData(
+                    x: 0,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuesto,
+                        width: 40,
+                        color: scheme.error,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  BarChartGroupData(
+                    x: 1,
+                    barRods: [
+                      BarChartRodData(
+                        toY: gastosReales,
+                        width: 40,
+                        color: scheme.error.withOpacity(0.65),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _LegendDot(color: scheme.error, label: 'Presupuesto'),
+              const SizedBox(width: 16),
+              _LegendDot(color: scheme.error.withOpacity(0.65), label: 'Gastos Reales'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: (gastosReales <= presupuesto)
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              gastosReales <= presupuesto
+                  ? '¡Excelente! Ahorraste ${_money(presupuesto - gastosReales)} del presupuesto'
+                  : '⚠ Excediste el presupuesto en ${_money(gastosReales - presupuesto)}',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: (gastosReales <= presupuesto)
+                    ? Colors.green.shade800
+                    : Colors.red.shade800,
               ),
               textAlign: TextAlign.center,
             ),
@@ -6970,6 +7044,111 @@ class _DistribucionIngresosChart extends StatelessWidget {
                 _LegendDot(
                   color: scheme.tertiary,
                   label: 'Variables: ${_money(ingresosVariables)}',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DistribucionGastosPresupuestoChart extends StatelessWidget {
+  const _DistribucionGastosPresupuestoChart({
+    required this.gastosFijos,
+    required this.gastosVariables,
+    required this.gastosHormiga,
+  });
+
+  final double gastosFijos;
+  final double gastosVariables;
+  final double gastosHormiga;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    final total = gastosFijos + gastosVariables + gastosHormiga;
+    
+    if (total == 0) {
+      return const Center(
+        child: Text(
+          'No hay gastos presupuestados',
+          style: TextStyle(color: Colors.black54),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Expanded(
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                sections: [
+                  if (gastosFijos > 0)
+                    PieChartSectionData(
+                      value: gastosFijos,
+                      title: '${((gastosFijos / total) * 100).toStringAsFixed(0)}%',
+                      color: scheme.error,
+                      radius: 50,
+                      titleStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  if (gastosVariables > 0)
+                    PieChartSectionData(
+                      value: gastosVariables,
+                      title: '${((gastosVariables / total) * 100).toStringAsFixed(0)}%',
+                      color: scheme.error.withOpacity(0.65),
+                      radius: 50,
+                      titleStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  if (gastosHormiga > 0)
+                    PieChartSectionData(
+                      value: gastosHormiga,
+                      title: '${((gastosHormiga / total) * 100).toStringAsFixed(0)}%',
+                      color: scheme.tertiary.withOpacity(0.85),
+                      radius: 50,
+                      titleStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              if (gastosFijos > 0)
+                _LegendDot(
+                  color: scheme.error,
+                  label: 'Fijos: ${_money(gastosFijos)}',
+                ),
+              if (gastosVariables > 0)
+                _LegendDot(
+                  color: scheme.error.withOpacity(0.65),
+                  label: 'Variables: ${_money(gastosVariables)}',
+                ),
+              if (gastosHormiga > 0)
+                _LegendDot(
+                  color: scheme.tertiary.withOpacity(0.85),
+                  label: 'Hormiga: ${_money(gastosHormiga)}',
                 ),
             ],
           ),
