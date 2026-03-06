@@ -732,6 +732,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _verificarDeudasHoy();
+  }
+
   final List<_IngresoMensual> _ingresos = [
     // Enero 2026
     _IngresoMensual(
@@ -925,7 +931,348 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
+  final List<_Deuda> _deudas = [
+    _Deuda(
+      nombre: 'Juan Pérez',
+      monto: 500,
+      tipo: _TipoDeuda.porCobrar,
+      descripcion: 'Préstamo personal',
+      fecha: DateTime(2026, 1, 10),
+    ),
+    _Deuda(
+      nombre: 'María García',
+      monto: 300,
+      tipo: _TipoDeuda.porCobrar,
+      descripcion: 'Venta a crédito',
+      fecha: DateTime(2026, 1, 15),
+    ),
+    _Deuda(
+      nombre: 'Banco Nacional',
+      monto: 2500,
+      tipo: _TipoDeuda.porPagar,
+      descripcion: 'Préstamo personal',
+      fecha: DateTime(2025, 12, 1),
+    ),
+    _Deuda(
+      nombre: 'Tienda XYZ',
+      monto: 450,
+      tipo: _TipoDeuda.porPagar,
+      descripcion: 'Compra a crédito',
+      fecha: DateTime(2026, 1, 5),
+    ),
+    _Deuda(
+      nombre: 'Carlos López',
+      monto: 200,
+      tipo: _TipoDeuda.porPagar,
+      descripcion: 'Préstamo amigo',
+      fecha: DateTime(2026, 1, 20),
+    ),
+    // Deuda para HOY (se mostrará alerta al iniciar)
+    _Deuda(
+      nombre: 'Pago Urgente',
+      monto: 150,
+      tipo: _TipoDeuda.porPagar,
+      descripcion: 'Pago pendiente de hoy',
+      fecha: DateTime.now(),
+    ),
+    _Deuda(
+      nombre: 'Cobro Pendiente',
+      monto: 250,
+      tipo: _TipoDeuda.porCobrar,
+      descripcion: 'Cliente debe pagar hoy',
+      fecha: DateTime.now(),
+    ),
+  ];
+
   double get _totalIngresos => _ingresos.fold(0, (sum, it) => sum + it.monto);
+
+  double get _totalDeudasPorPagar => _deudas
+      .where((d) => d.tipo == _TipoDeuda.porPagar)
+      .fold(0.0, (sum, d) => sum + d.monto);
+
+  double get _totalDeudasPorCobrar => _deudas
+      .where((d) => d.tipo == _TipoDeuda.porCobrar)
+      .fold(0.0, (sum, d) => sum + d.monto);
+
+  void _openDeudasScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _DeudasScreen(
+          deudas: _deudas,
+          onAdd: _addDeuda,
+          onEdit: _editDeuda,
+          onDelete: _deleteDeuda,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addDeuda() async {
+    final result = await _openDeudaModal(context);
+    if (!mounted || result == null) return;
+    setState(() => _deudas.add(result));
+    
+    // Verificar si la deuda es para hoy
+    final hoy = DateTime.now();
+    final esHoy = result.fecha.year == hoy.year &&
+        result.fecha.month == hoy.month &&
+        result.fecha.day == hoy.day;
+    
+    if (esHoy) {
+      _mostrarAlertaDeuda(result);
+    }
+  }
+
+  Future<void> _editDeuda(int index) async {
+    final result = await _openDeudaModal(context, initial: _deudas[index]);
+    if (!mounted || result == null) return;
+    setState(() => _deudas[index] = result);
+  }
+
+  void _deleteDeuda(int index) {
+    setState(() => _deudas.removeAt(index));
+  }
+
+  void _mostrarAlertaDeuda(_Deuda deuda) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.notifications_active,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(width: 8),
+            const Text('Recordatorio de Deuda'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              deuda.tipo == _TipoDeuda.porPagar
+                  ? 'Tienes una deuda por pagar HOY'
+                  : 'Tienes una deuda por cobrar HOY',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: deuda.tipo == _TipoDeuda.porPagar
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Nombre:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          deuda.nombre,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text(
+                        'Monto:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _money(deuda.monto),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                          color: deuda.tipo == _TipoDeuda.porPagar
+                              ? Colors.red.shade700
+                              : Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (deuda.descripcion.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      deuda.descripcion,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _verificarDeudasHoy() {
+    final hoy = DateTime.now();
+    final deudasHoy = _deudas.where((deuda) {
+      return deuda.fecha.year == hoy.year &&
+          deuda.fecha.month == hoy.month &&
+          deuda.fecha.day == hoy.day;
+    }).toList();
+
+    if (deudasHoy.isNotEmpty) {
+      // Mostrar alerta después de que se construya el widget
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mostrarAlertasDeudasHoy(deudasHoy);
+      });
+    }
+  }
+
+  void _mostrarAlertasDeudasHoy(List<_Deuda> deudasHoy) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.notifications_active,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(width: 8),
+            Text('Recordatorios (${deudasHoy.length})'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tienes deudas para HOY:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...deudasHoy.map((deuda) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: deuda.tipo == _TipoDeuda.porPagar
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: deuda.tipo == _TipoDeuda.porPagar
+                          ? Colors.red.withOpacity(0.3)
+                          : Colors.green.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            deuda.tipo == _TipoDeuda.porPagar
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward,
+                            size: 16,
+                            color: deuda.tipo == _TipoDeuda.porPagar
+                                ? Colors.red.shade700
+                                : Colors.green.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            deuda.tipo == _TipoDeuda.porPagar
+                                ? 'Por Pagar'
+                                : 'Por Cobrar',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: deuda.tipo == _TipoDeuda.porPagar
+                                  ? Colors.red.shade700
+                                  : Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        deuda.nombre,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _money(deuda.monto),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: deuda.tipo == _TipoDeuda.porPagar
+                              ? Colors.red.shade700
+                              : Colors.green.shade700,
+                        ),
+                      ),
+                      if (deuda.descripcion.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          deuda.descripcion,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _addIngreso() async {
     final result = await _openIngresoModal(context);
@@ -1017,6 +1364,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final views = [
       _ResumenTab(
         totalIngresos: _totalIngresos,
+        ingresos: _ingresos,
+        gastos: _gastos,
         onOpenIngresos: _openIngresosScreen,
       ),
       _PresupuestoTab(
@@ -1024,6 +1373,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         gastos: _gastos,
         ingresosReales: _totalIngresos,
         categorias: _categoriasGasto,
+        onAddIngreso: _addIngreso,
+        onEditIngreso: _editIngreso,
+        onDeleteIngreso: _deleteIngreso,
         onAddCategoria: _addCategoriaGasto,
         onDeleteCategoria: _deleteCategoriaGasto,
         onAddToCategoria: _addGastosToCategoria,
@@ -1079,7 +1431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.payments_outlined),
-                title: const Text('Ingresos mensuales'),
+                title: const Text('Operaciones'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _openIngresosScreen();
@@ -1091,6 +1443,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   setState(() => _tab = 3);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance_outlined),
+                title: const Text('Deudas Generales'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _openDeudasScreen();
                 },
               ),
               ListTile(
@@ -1146,7 +1506,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           NavigationDestination(
             icon: Icon(Icons.payments_outlined),
             selectedIcon: Icon(Icons.payments),
-            label: 'Ingresos',
+            label: 'Operaciones',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
@@ -1170,6 +1530,9 @@ class _PresupuestoTab extends StatelessWidget {
     required this.gastos,
     required this.ingresosReales,
     required this.categorias,
+    required this.onAddIngreso,
+    required this.onEditIngreso,
+    required this.onDeleteIngreso,
     required this.onAddCategoria,
     required this.onDeleteCategoria,
     required this.onAddToCategoria,
@@ -1181,6 +1544,9 @@ class _PresupuestoTab extends StatelessWidget {
   final List<_GastoMensual> gastos;
   final double ingresosReales;
   final List<String> categorias;
+  final Future<void> Function() onAddIngreso;
+  final Future<void> Function(int index) onEditIngreso;
+  final void Function(int index) onDeleteIngreso;
   final Future<void> Function() onAddCategoria;
   final Future<void> Function(String categoria) onDeleteCategoria;
   final Future<void> Function(String categoria) onAddToCategoria;
@@ -1273,18 +1639,28 @@ class _PresupuestoTab extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Ingresos Promedio Mensuales',
+                          'Ingresos Presupuestados',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                       ),
-                      Text(
-                        _money(totalIngresos),
-                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      FilledButton.tonalIcon(
+                        onPressed: onAddIngreso,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Ingreso'),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Total: ${_money(totalIngresos)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primary,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   if (ingresos.isEmpty)
@@ -1328,11 +1704,35 @@ class _PresupuestoTab extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              Text(
-                                _money(it.monto),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _money(it.monto),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        onPressed: () => onEditIngreso(i),
+                                        icon: const Icon(Icons.edit_outlined),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        onPressed: () => onDeleteIngreso(i),
+                                        icon: const Icon(Icons.delete_outline),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1341,6 +1741,14 @@ class _PresupuestoTab extends StatelessWidget {
                     ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Distribución de Ingresos Presupuestados',
+            child: SizedBox(
+              height: 200,
+              child: _DistribucionIngresosChart(ingresos: ingresos),
             ),
           ),
           const SizedBox(height: 14),
@@ -2359,14 +2767,29 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
 class _ResumenTab extends StatelessWidget {
   const _ResumenTab({
     required this.totalIngresos,
+    required this.ingresos,
+    required this.gastos,
     required this.onOpenIngresos,
   });
 
   final double totalIngresos;
+  final List<_IngresoMensual> ingresos;
+  final List<_GastoMensual> gastos;
   final VoidCallback onOpenIngresos;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    // Calcular ganancias presupuestadas (ingresos - gastos del presupuesto)
+    final totalIngresosPresupuesto = ingresos.fold(0.0, (sum, i) => sum + i.monto);
+    final totalGastosPresupuesto = gastos.fold(0.0, (sum, g) => sum + g.monto);
+    final gananciasPresupuestadas = totalIngresosPresupuesto - totalGastosPresupuesto;
+    
+    // Calcular ganancias reales (ingresos reales - gastos reales)
+    // Por ahora usamos los mismos datos, pero en producción vendrían de Operaciones
+    final gananciasReales = totalIngresos - totalGastosPresupuesto;
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -2374,9 +2797,182 @@ class _ResumenTab extends StatelessWidget {
         children: [
           const _KpisGrid(),
           const SizedBox(height: 14),
+          // Card de comparación de ganancias
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Ganancias del Mes',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.trending_up,
+                        color: scheme.primary,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Presupuestadas',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _money(gananciasPresupuestadas),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ingresos: ${_money(totalIngresosPresupuesto)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              Text(
+                                'Gastos: ${_money(totalGastosPresupuesto)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: scheme.tertiary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Reales',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _money(gananciasReales),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: scheme.tertiary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ingresos: ${_money(totalIngresos)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              Text(
+                                'Gastos: ${_money(totalGastosPresupuesto)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (gananciasReales >= gananciasPresupuestadas)
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          (gananciasReales >= gananciasPresupuestadas)
+                              ? Icons.check_circle_outline
+                              : Icons.warning_amber_outlined,
+                          color: (gananciasReales >= gananciasPresupuestadas)
+                              ? Colors.green.shade700
+                              : Colors.orange.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            (gananciasReales >= gananciasPresupuestadas)
+                                ? '¡Excelente! Superaste tu meta de ganancias'
+                                : 'Falta ${_money(gananciasPresupuestadas - gananciasReales)} para alcanzar tu meta',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: (gananciasReales >= gananciasPresupuestadas)
+                                  ? Colors.green.shade700
+                                  : Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           _IngresosMensualesPreviewCard(
             total: totalIngresos,
             onOpen: onOpenIngresos,
+          ),
+          const SizedBox(height: 14),
+          _CardSection(
+            title: 'Comparación: Ganancias Presupuestadas vs Reales',
+            child: SizedBox(
+              height: 240,
+              child: _ComparacionGananciasChart(
+                presupuestadas: gananciasPresupuestadas,
+                reales: gananciasReales,
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           _CardSection(
@@ -2645,6 +3241,43 @@ class _IngresoMensual {
   }
 }
 
+enum _TipoDeuda {
+  porPagar,
+  porCobrar,
+}
+
+class _Deuda {
+  _Deuda({
+    required this.nombre,
+    required this.monto,
+    required this.tipo,
+    DateTime? fecha,
+    this.descripcion = '',
+  }) : fecha = fecha ?? DateTime.now();
+
+  final String nombre;
+  final double monto;
+  final _TipoDeuda tipo;
+  final DateTime fecha;
+  final String descripcion;
+
+  _Deuda copyWith({
+    String? nombre,
+    double? monto,
+    _TipoDeuda? tipo,
+    DateTime? fecha,
+    String? descripcion,
+  }) {
+    return _Deuda(
+      nombre: nombre ?? this.nombre,
+      monto: monto ?? this.monto,
+      tipo: tipo ?? this.tipo,
+      fecha: fecha ?? this.fecha,
+      descripcion: descripcion ?? this.descripcion,
+    );
+  }
+}
+
 class _IngresosMensualesPreviewCard extends StatelessWidget {
   const _IngresosMensualesPreviewCard({
     required this.total,
@@ -2678,7 +3311,7 @@ class _IngresosMensualesPreviewCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Resumen Mensual de ingresos',
+                    'Resumen de Operaciones',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 4),
@@ -2823,7 +3456,7 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Resumen Mensual de ingresos')),
+      appBar: AppBar(title: const Text('Operaciones')),
       body: SafeArea(
         child: _IngresosMensualesView(
           items: widget.items,
@@ -3129,8 +3762,8 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
                 Expanded(
                   child: Text(
                     isIngresos
-                        ? 'Total de Ingresos Mensuales'
-                        : 'Total de Gastos Mensuales',
+                        ? 'Total de Ingresos'
+                        : 'Total de Gastos',
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
@@ -5551,6 +6184,793 @@ class _EvolucionAnualChart extends StatelessWidget {
               _LegendDot(color: scheme.primary, label: 'Ing. Real'),
               _LegendDot(color: scheme.error.withOpacity(0.4), label: 'Gast. Presup.'),
               _LegendDot(color: scheme.error, label: 'Gast. Real'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeudasScreen extends StatelessWidget {
+  const _DeudasScreen({
+    required this.deudas,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<_Deuda> deudas;
+  final Future<void> Function() onAdd;
+  final Future<void> Function(int index) onEdit;
+  final void Function(int index) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    final deudasPorPagar = deudas.where((d) => d.tipo == _TipoDeuda.porPagar).toList();
+    final deudasPorCobrar = deudas.where((d) => d.tipo == _TipoDeuda.porCobrar).toList();
+    
+    final totalPorPagar = deudasPorPagar.fold(0.0, (sum, d) => sum + d.monto);
+    final totalPorCobrar = deudasPorCobrar.fold(0.0, (sum, d) => sum + d.monto);
+    final balanceDeudas = totalPorCobrar - totalPorPagar;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Deudas Generales'),
+        actions: [
+          IconButton(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add),
+            tooltip: 'Agregar deuda',
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: Colors.red.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.arrow_upward, color: Colors.red.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Por Pagar',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _money(totalPorPagar),
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${deudasPorPagar.length} deuda(s)',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Card(
+                    color: Colors.green.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.arrow_downward, color: Colors.green.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Por Cobrar',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _money(totalPorCobrar),
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${deudasPorCobrar.length} deuda(s)',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: balanceDeudas >= 0
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Balance de Deudas',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _money(balanceDeudas),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: balanceDeudas >= 0
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    balanceDeudas >= 0
+                        ? 'Te deben más de lo que debes'
+                        : 'Debes más de lo que te deben',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _CardSection(
+              title: 'Deudas por Pagar',
+              child: deudasPorPagar.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'No tienes deudas por pagar',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: deudasPorPagar.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final deudaIndex = deudas.indexOf(deudasPorPagar[i]);
+                        final deuda = deudasPorPagar[i];
+                        return _DeudaTile(
+                          deuda: deuda,
+                          color: Colors.red.shade700,
+                          onEdit: () => onEdit(deudaIndex),
+                          onDelete: () => onDelete(deudaIndex),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 14),
+            _CardSection(
+              title: 'Deudas por Cobrar',
+              child: deudasPorCobrar.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'No tienes deudas por cobrar',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: deudasPorCobrar.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final deudaIndex = deudas.indexOf(deudasPorCobrar[i]);
+                        final deuda = deudasPorCobrar[i];
+                        return _DeudaTile(
+                          deuda: deuda,
+                          color: Colors.green.shade700,
+                          onEdit: () => onEdit(deudaIndex),
+                          onDelete: () => onDelete(deudaIndex),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeudaTile extends StatelessWidget {
+  const _DeudaTile({
+    required this.deuda,
+    required this.color,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final _Deuda deuda;
+  final Color color;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              deuda.tipo == _TipoDeuda.porPagar
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  deuda.nombre,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+                if (deuda.descripcion.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    deuda.descripcion,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 2),
+                Text(
+                  _formatearFecha(deuda.fecha),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _money(deuda.monto),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<_Deuda?> _openDeudaModal(BuildContext context, {_Deuda? initial}) {
+  return showModalBottomSheet<_Deuda>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => _DeudaModal(initial: initial),
+  );
+}
+
+class _DeudaModal extends StatefulWidget {
+  const _DeudaModal({this.initial});
+
+  final _Deuda? initial;
+
+  @override
+  State<_DeudaModal> createState() => _DeudaModalState();
+}
+
+class _DeudaModalState extends State<_DeudaModal> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nombre;
+  late final TextEditingController _monto;
+  late final TextEditingController _descripcion;
+  late _TipoDeuda _tipo;
+  late DateTime _fecha;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombre = TextEditingController(text: widget.initial?.nombre ?? '');
+    _monto = TextEditingController(
+      text: widget.initial?.monto.toString() ?? '',
+    );
+    _descripcion = TextEditingController(
+      text: widget.initial?.descripcion ?? '',
+    );
+    _tipo = widget.initial?.tipo ?? _TipoDeuda.porPagar;
+    _fecha = widget.initial?.fecha ?? DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    _monto.dispose();
+    _descripcion.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final nombre = _nombre.text.trim();
+    final montoRaw = _monto.text.trim().replaceAll(',', '.');
+    final monto = double.parse(montoRaw);
+    final descripcion = _descripcion.text.trim();
+
+    final deuda = _Deuda(
+      nombre: nombre,
+      monto: monto,
+      tipo: _tipo,
+      fecha: _fecha,
+      descripcion: descripcion,
+    );
+
+    Navigator.of(context).pop(deuda);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.initial == null ? 'Agregar Deuda' : 'Editar Deuda',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<_TipoDeuda>(
+              value: _tipo,
+              decoration: const InputDecoration(
+                labelText: 'Tipo de deuda',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: _TipoDeuda.porPagar,
+                  child: Text('Por Pagar'),
+                ),
+                DropdownMenuItem(
+                  value: _TipoDeuda.porCobrar,
+                  child: Text('Por Cobrar'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _tipo = value);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _nombre,
+              decoration: const InputDecoration(
+                labelText: 'Nombre (Persona o Empresa)',
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Ingresa un nombre';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _monto,
+              decoration: const InputDecoration(
+                labelText: 'Monto',
+                border: OutlineInputBorder(),
+                prefixText: '\$ ',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Ingresa un monto';
+                }
+                final parsed = double.tryParse(v.trim().replaceAll(',', '.'));
+                if (parsed == null || parsed <= 0) {
+                  return 'Monto inválido';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _descripcion,
+              decoration: const InputDecoration(
+                labelText: 'Descripción (opcional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Fecha'),
+              subtitle: Text(_formatearFecha(_fecha)),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _fecha,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                );
+                if (picked != null) {
+                  setState(() => _fecha = picked);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancelar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _save,
+                    child: const Text('Guardar'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatearFecha(DateTime fecha) {
+  const meses = [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+  ];
+  return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}';
+}
+
+class _ComparacionGananciasChart extends StatelessWidget {
+  const _ComparacionGananciasChart({
+    required this.presupuestadas,
+    required this.reales,
+  });
+
+  final double presupuestadas;
+  final double reales;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final maxValue = presupuestadas > reales ? presupuestadas : reales;
+    final displayMax = maxValue * 1.3;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, right: 16, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: displayMax,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final label = groupIndex == 0 ? 'Presupuestadas' : 'Reales';
+                      return BarTooltipItem(
+                        '$label\n${_money(rod.toY)}',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final labels = ['Presupuestadas', 'Reales'];
+                        if (value.toInt() >= 0 && value.toInt() < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              labels[value.toInt()],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          _moneyShort(value),
+                          style: const TextStyle(fontSize: 11),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  BarChartGroupData(
+                    x: 0,
+                    barRods: [
+                      BarChartRodData(
+                        toY: presupuestadas,
+                        width: 50,
+                        color: scheme.primary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                        ),
+                        gradient: LinearGradient(
+                          colors: [
+                            scheme.primary,
+                            scheme.primary.withOpacity(0.7),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ],
+                  ),
+                  BarChartGroupData(
+                    x: 1,
+                    barRods: [
+                      BarChartRodData(
+                        toY: reales,
+                        width: 50,
+                        color: scheme.tertiary,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                        ),
+                        gradient: LinearGradient(
+                          colors: [
+                            scheme.tertiary,
+                            scheme.tertiary.withOpacity(0.7),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _LegendDot(color: scheme.primary, label: 'Presupuestadas'),
+              const SizedBox(width: 16),
+              _LegendDot(color: scheme.tertiary, label: 'Reales'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DistribucionIngresosChart extends StatelessWidget {
+  const _DistribucionIngresosChart({required this.ingresos});
+
+  final List<_IngresoMensual> ingresos;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    
+    if (ingresos.isEmpty) {
+      return const Center(
+        child: Text(
+          'No hay ingresos presupuestados',
+          style: TextStyle(color: Colors.black54),
+        ),
+      );
+    }
+
+    final ingresosFijos = ingresos
+        .where((i) => i.tipo == _IngresoTipo.fija)
+        .fold(0.0, (sum, i) => sum + i.monto);
+    final ingresosVariables = ingresos
+        .where((i) => i.tipo != _IngresoTipo.fija)
+        .fold(0.0, (sum, i) => sum + i.monto);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Expanded(
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                sections: [
+                  if (ingresosFijos > 0)
+                    PieChartSectionData(
+                      value: ingresosFijos,
+                      title: '${((ingresosFijos / (ingresosFijos + ingresosVariables)) * 100).toStringAsFixed(0)}%',
+                      color: scheme.primary,
+                      radius: 50,
+                      titleStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  if (ingresosVariables > 0)
+                    PieChartSectionData(
+                      value: ingresosVariables,
+                      title: '${((ingresosVariables / (ingresosFijos + ingresosVariables)) * 100).toStringAsFixed(0)}%',
+                      color: scheme.tertiary,
+                      radius: 50,
+                      titleStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              if (ingresosFijos > 0)
+                _LegendDot(
+                  color: scheme.primary,
+                  label: 'Fijos: ${_money(ingresosFijos)}',
+                ),
+              if (ingresosVariables > 0)
+                _LegendDot(
+                  color: scheme.tertiary,
+                  label: 'Variables: ${_money(ingresosVariables)}',
+                ),
             ],
           ),
         ],
