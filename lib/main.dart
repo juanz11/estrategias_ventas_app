@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 void main() {
@@ -331,6 +332,15 @@ class EstrategiasVentasApp extends StatelessWidget {
     return MaterialApp(
       title: 'Balance Mensual',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es', 'ES'),
+      ],
+      locale: const Locale('es', 'ES'),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -2531,6 +2541,18 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
             ),
           ),
         ),
+        const SizedBox(height: 14),
+        _CardSection(
+          title: 'Distribución de Gastos',
+          child: SizedBox(
+            height: 280,
+            child: _DistribucionGastosEstadisticasChart(
+              gastos: widget.gastos.where((g) => 
+                g.mes.year == mes.year && g.mes.month == mes.month
+              ).toList(),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -3714,6 +3736,7 @@ class _IngresoModalState extends State<_IngresoModal> {
   late final TextEditingController _etiqueta;
   late final TextEditingController _monto;
   late _IngresoTipo _tipo;
+  late DateTime _fecha;
 
   @override
   void initState() {
@@ -3725,6 +3748,7 @@ class _IngresoModalState extends State<_IngresoModal> {
           : widget.initial!.monto.toStringAsFixed(2),
     );
     _tipo = widget.initial?.tipo ?? _IngresoTipo.sinEspecificar;
+    _fecha = widget.initial?.mes ?? DateTime.now();
   }
 
   @override
@@ -3734,6 +3758,22 @@ class _IngresoModalState extends State<_IngresoModal> {
     super.dispose();
   }
 
+  Future<void> _seleccionarFecha() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fecha,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      locale: const Locale('es', 'ES'),
+      helpText: 'Seleccionar fecha',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+    );
+    if (picked != null) {
+      setState(() => _fecha = picked);
+    }
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final parsed = double.parse(_monto.text.trim().replaceAll(',', '.'));
@@ -3741,6 +3781,7 @@ class _IngresoModalState extends State<_IngresoModal> {
       etiqueta: _etiqueta.text.trim(),
       tipo: _tipo,
       monto: parsed,
+      mes: _fecha,
     );
     Navigator.of(context).pop(item);
   }
@@ -3828,6 +3869,18 @@ class _IngresoModalState extends State<_IngresoModal> {
               },
               onFieldSubmitted: (_) => _save(),
             ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Fecha'),
+              subtitle: Text(_formatearFecha(_fecha)),
+              onTap: _seleccionarFecha,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: Colors.grey.shade400),
+              ),
+            ),
             const SizedBox(height: 16),
             SizedBox(
               height: 48,
@@ -3862,6 +3915,7 @@ class _GastoModalState extends State<_GastoModal> {
   late bool _pagoConTarjeta;
   late bool _gastoHormiga;
   late _GastoPeriodicidad _periodicidad;
+  late DateTime _fecha;
 
   @override
   void initState() {
@@ -3879,6 +3933,7 @@ class _GastoModalState extends State<_GastoModal> {
     _pagoConTarjeta = widget.initial?.pagoConTarjeta ?? false;
     _gastoHormiga = widget.initial?.gastoHormiga ?? false;
     _periodicidad = widget.initial?.periodicidad ?? _GastoPeriodicidad.mensual;
+    _fecha = widget.initial?.mes ?? DateTime.now();
   }
 
   @override
@@ -3887,6 +3942,22 @@ class _GastoModalState extends State<_GastoModal> {
     _subCategoria.dispose();
     _monto.dispose();
     super.dispose();
+  }
+
+  Future<void> _seleccionarFecha() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fecha,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      locale: const Locale('es', 'ES'),
+      helpText: 'Seleccionar fecha',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+    );
+    if (picked != null) {
+      setState(() => _fecha = picked);
+    }
   }
 
   void _save() {
@@ -3900,6 +3971,7 @@ class _GastoModalState extends State<_GastoModal> {
       pagoConTarjeta: _pagoConTarjeta,
       gastoHormiga: _gastoHormiga,
       periodicidad: _periodicidad,
+      mes: _fecha,
     );
     Navigator.of(context).pop(item);
   }
@@ -4017,6 +4089,18 @@ class _GastoModalState extends State<_GastoModal> {
               value: _gastoHormiga,
               onChanged: (v) => setState(() => _gastoHormiga = v),
               title: const Text('Gasto hormiga'),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Fecha'),
+              subtitle: Text(_formatearFecha(_fecha)),
+              onTap: _seleccionarFecha,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: Colors.grey.shade400),
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -6060,6 +6144,99 @@ class _ComparacionMensualChart extends StatelessWidget {
   }
 }
 
+class _DistribucionGastosEstadisticasChart extends StatelessWidget {
+  const _DistribucionGastosEstadisticasChart({
+    required this.gastos,
+  });
+
+  final List<_GastoMensual> gastos;
+
+  @override
+  Widget build(BuildContext context) {
+    if (gastos.isEmpty) {
+      return const Center(
+        child: Text(
+          'No hay gastos registrados para este mes',
+          style: TextStyle(color: Colors.black54),
+        ),
+      );
+    }
+
+    // Agrupar gastos por categoría
+    final Map<String, double> gastosPorCategoria = {};
+    for (final gasto in gastos) {
+      gastosPorCategoria[gasto.categoria] = 
+          (gastosPorCategoria[gasto.categoria] ?? 0) + gasto.monto;
+    }
+
+    final total = gastosPorCategoria.values.fold(0.0, (sum, val) => sum + val);
+    
+    // Colores para las categorías
+    final colors = [
+      Colors.red.shade400,
+      Colors.orange.shade400,
+      Colors.amber.shade400,
+      Colors.green.shade400,
+      Colors.blue.shade400,
+      Colors.purple.shade400,
+      Colors.pink.shade400,
+      Colors.teal.shade400,
+    ];
+
+    final sections = gastosPorCategoria.entries.toList().asMap().entries.map((entry) {
+      final index = entry.key;
+      final categoria = entry.value.key;
+      final monto = entry.value.value;
+      final porcentaje = (monto / total) * 100;
+      
+      return PieChartSectionData(
+        color: colors[index % colors.length],
+        value: monto,
+        title: '${porcentaje.toStringAsFixed(0)}%',
+        radius: 100,
+        titleStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      );
+    }).toList();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Expanded(
+            child: PieChart(
+              PieChartData(
+                sections: sections,
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                borderData: FlBorderData(show: false),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: gastosPorCategoria.entries.toList().asMap().entries.map((entry) {
+              final index = entry.key;
+              final categoria = entry.value.key;
+              final monto = entry.value.value;
+              return _LegendDot(
+                color: colors[index % colors.length],
+                label: '$categoria: ${_money(monto)}',
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EvolucionAnualChart extends StatelessWidget {
   const _EvolucionAnualChart({
     required this.datosAnuales,
@@ -6778,6 +6955,10 @@ class _DeudaModalState extends State<_DeudaModal> {
                   initialDate: _fecha,
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2030),
+                  locale: const Locale('es', 'ES'),
+                  helpText: 'Seleccionar fecha',
+                  cancelText: 'Cancelar',
+                  confirmText: 'Aceptar',
                 );
                 if (picked != null) {
                   setState(() => _fecha = picked);
