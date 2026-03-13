@@ -24,7 +24,7 @@ class _GastoDraft {
 
   final TextEditingController subCategoria;
   final TextEditingController monto;
-  GastoPeriodicidad periodicidad;
+  _GastoPeriodicidad periodicidad;
   bool esFijo;
   bool pagoConTarjeta;
   bool gastoHormiga;
@@ -70,7 +70,7 @@ class _MultiGastoModalState extends State<_MultiGastoModal> {
       _GastoDraft(
         subCategoria: TextEditingController(),
         monto: TextEditingController(),
-        periodicidad: GastoPeriodicidad.mensual,
+        periodicidad: _GastoPeriodicidad.mensual,
         esFijo: false,
         pagoConTarjeta: false,
         gastoHormiga: false,
@@ -87,14 +87,14 @@ class _MultiGastoModalState extends State<_MultiGastoModal> {
     if (!_formKey.currentState!.validate()) return;
 
     final categoria = _categoria.text.trim();
-    final items = <GastoMensual>[];
+    final items = <_GastoMensual>[];
 
     for (final d in _drafts) {
       final sub = d.subCategoria.text.trim();
       final montoRaw = d.monto.text.trim().replaceAll(',', '.');
       final monto = double.parse(montoRaw);
       items.add(
-        GastoMensual(
+        _GastoMensual(
           categoria: categoria,
           subCategoria: sub,
           monto: monto,
@@ -200,13 +200,13 @@ class _MultiGastoModalState extends State<_MultiGastoModal> {
                             },
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<GastoPeriodicidad>(
+                          DropdownButtonFormField<_GastoPeriodicidad>(
                             value: d.periodicidad,
                             decoration: const InputDecoration(
                               labelText: 'Periodicidad',
                               prefixIcon: Icon(Icons.calendar_month_outlined),
                             ),
-                            items: GastoPeriodicidad.values
+                            items: _GastoPeriodicidad.values
                                 .map(
                                   (v) => DropdownMenuItem(
                                     value: v,
@@ -590,14 +590,14 @@ class _GastosGroupedCard extends StatelessWidget {
     required this.onAddToCategoria,
   });
 
-  final List<GastoMensual> gastos;
+  final List<_GastoMensual> gastos;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
   final Future<void> Function(String categoria) onAddToCategoria;
 
   @override
   Widget build(BuildContext context) {
-    final grouped = <String, List<MapEntry<int, GastoMensual>>>{};
+    final grouped = <String, List<MapEntry<int, _GastoMensual>>>{};
     for (var i = 0; i < gastos.length; i++) {
       final g = gastos[i];
       grouped.putIfAbsent(g.categoria, () => []).add(MapEntry(i, g));
@@ -776,62 +776,62 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Datos de PRESUPUESTO (estimaciones mensuales)
   @override
-  List<IngresoMensual> ingresosPresupuesto = [];
+  List<_IngresoMensual> _ingresosPresupuesto = [];
 
   @override
-  List<GastoMensual> gastosPresupuesto = [];
+  List<_GastoMensual> _gastosPresupuesto = [];
 
   // Datos REALES de OPERACIONES (ingresos y gastos reales por mes)
   @override
-  List<IngresoMensual> ingresosReales = [];
+  List<_IngresoMensual> _ingresosReales = [];
 
   @override
-  List<GastoMensual> gastosReales = [];
+  List<_GastoMensual> _gastosReales = [];
 
   @override
-  Set<String> categoriasGasto = {};
+  Set<String> _categoriasGasto = {};
 
   @override
-  List<Deuda> deudas = [];
+  List<_Deuda> _deudas = [];
 
   // Totales de ingresos y gastos REALES (de Operaciones - TODOS los meses)
-  double get _totalIngresosReales => ingresosReales.fold(0, (sum, it) => sum + it.monto);
+  double get _totalIngresosReales => _ingresosReales.fold(0, (sum, it) => sum + it.monto);
 
-  double get _totalGastosReales => gastosReales.fold(0, (sum, it) => sum + it.monto);
+  double get _totalGastosReales => _gastosReales.fold(0, (sum, it) => sum + it.monto);
 
   // Ingresos y gastos reales del mes actual (de Operaciones)
   double get _ingresosRealesMesActual {
     final ahora = DateTime.now();
-    return ingresosReales
+    return _ingresosReales
         .where((i) => i.mes.year == ahora.year && i.mes.month == ahora.month)
         .fold(0.0, (sum, i) => sum + i.monto);
   }
 
   double get _gastosRealesMesActual {
     final ahora = DateTime.now();
-    return gastosReales
+    return _gastosReales
         .where((g) => g.mes.year == ahora.year && g.mes.month == ahora.month)
         .fold(0.0, (sum, g) => sum + g.monto);
   }
 
   // Totales de presupuesto
-  double get _totalPresupuestoIngresos => ingresosPresupuesto.fold(0, (sum, it) => sum + it.monto);
+  double get _totalPresupuestoIngresos => _ingresosPresupuesto.fold(0, (sum, it) => sum + it.monto);
 
-  double get _totalPresupuestoGastos => gastosPresupuesto.fold(0, (sum, it) => sum + it.monto);
+  double get _totalPresupuestoGastos => _gastosPresupuesto.fold(0, (sum, it) => sum + it.monto);
 
-  double get _totalDeudasPorPagar => deudas
-      .where((d) => d.tipo == TipoDeuda.porPagar)
+  double get _totalDeudasPorPagar => _deudas
+      .where((d) => d.tipo == _TipoDeuda.porPagar)
       .fold(0.0, (sum, d) => sum + d.monto);
 
-  double get _totalDeudasPorCobrar => deudas
-      .where((d) => d.tipo == TipoDeuda.porCobrar)
+  double get _totalDeudasPorCobrar => _deudas
+      .where((d) => d.tipo == _TipoDeuda.porCobrar)
       .fold(0.0, (sum, d) => sum + d.monto);
 
   void _openDeudasScreen() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _DeudasScreen(
-          deudas: deudas,
+          deudas: _deudas,
           onAdd: _addDeuda,
           onEdit: _editDeuda,
           onDelete: _deleteDeuda,
@@ -857,7 +857,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _editDeuda(int index) async {
-    final result = await _openDeudaModal(context, initial: deudas[index]);
+    final result = await _openDeudaModal(context, initial: _deudas[index]);
     if (!mounted || result == null) return;
     await editDeuda(index, result);
   }
@@ -866,7 +866,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     deleteDeuda(index);
   }
 
-  void _mostrarAlertaDeuda(Deuda deuda) {
+  void _mostrarAlertaDeuda(_Deuda deuda) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -885,7 +885,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              deuda.tipo == TipoDeuda.porPagar
+              deuda.tipo == _TipoDeuda.porPagar
                   ? 'Tienes una deuda por pagar HOY'
                   : 'Tienes una deuda por cobrar HOY',
               style: const TextStyle(
@@ -897,7 +897,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: deuda.tipo == TipoDeuda.porPagar
+                color: deuda.tipo == _TipoDeuda.porPagar
                     ? Colors.red.withOpacity(0.1)
                     : Colors.green.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -942,7 +942,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 18,
-                          color: deuda.tipo == TipoDeuda.porPagar
+                          color: deuda.tipo == _TipoDeuda.porPagar
                               ? Colors.red.shade700
                               : Colors.green.shade700,
                         ),
@@ -976,7 +976,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _verificarDeudasHoy() {
     final hoy = DateTime.now();
-    final deudasHoy = deudas.where((deuda) {
+    final deudasHoy = _deudas.where((deuda) {
       return deuda.fecha.year == hoy.year &&
           deuda.fecha.month == hoy.month &&
           deuda.fecha.day == hoy.day;
@@ -990,7 +990,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  void _mostrarAlertasDeudasHoy(List<Deuda> deudasHoy) {
+  void _mostrarAlertasDeudasHoy(List<_Deuda> deudasHoy) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1022,12 +1022,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: deuda.tipo == TipoDeuda.porPagar
+                    color: deuda.tipo == _TipoDeuda.porPagar
                         ? Colors.red.withOpacity(0.1)
                         : Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: deuda.tipo == TipoDeuda.porPagar
+                      color: deuda.tipo == _TipoDeuda.porPagar
                           ? Colors.red.withOpacity(0.3)
                           : Colors.green.withOpacity(0.3),
                     ),
@@ -1038,23 +1038,23 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Row(
                         children: [
                           Icon(
-                            deuda.tipo == TipoDeuda.porPagar
+                            deuda.tipo == _TipoDeuda.porPagar
                                 ? Icons.arrow_upward
                                 : Icons.arrow_downward,
                             size: 16,
-                            color: deuda.tipo == TipoDeuda.porPagar
+                            color: deuda.tipo == _TipoDeuda.porPagar
                                 ? Colors.red.shade700
                                 : Colors.green.shade700,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            deuda.tipo == TipoDeuda.porPagar
+                            deuda.tipo == _TipoDeuda.porPagar
                                 ? 'Por Pagar'
                                 : 'Por Cobrar',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: deuda.tipo == TipoDeuda.porPagar
+                              color: deuda.tipo == _TipoDeuda.porPagar
                                   ? Colors.red.shade700
                                   : Colors.green.shade700,
                             ),
@@ -1075,7 +1075,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
-                          color: deuda.tipo == TipoDeuda.porPagar
+                          color: deuda.tipo == _TipoDeuda.porPagar
                               ? Colors.red.shade700
                               : Colors.green.shade700,
                         ),
@@ -1115,7 +1115,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _editIngresoPresupuesto(int index) async {
-    final result = await _openIngresoModal(context, initial: ingresosPresupuesto[index]);
+    final result = await _openIngresoModal(context, initial: _ingresosPresupuesto[index]);
     if (!mounted || result == null) return;
     await editIngresoPresupuesto(index, result);
   }
@@ -1125,7 +1125,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _editGastoPresupuesto(int index) async {
-    final result = await _openGastoModal(context, initial: gastosPresupuesto[index]);
+    final result = await _openGastoModal(context, initial: _gastosPresupuesto[index]);
     if (!mounted || result == null) return;
     await editGastoPresupuesto(index, result);
   }
@@ -1145,7 +1145,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _editIngresoReal(int index) async {
-    final result = await _openIngresoModal(context, initial: ingresosReales[index]);
+    final result = await _openIngresoModal(context, initial: _ingresosReales[index]);
     if (!mounted || result == null) return;
     await editIngresoReal(index, result);
   }
@@ -1161,7 +1161,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _editGastoReal(int index) async {
-    final result = await _openGastoModal(context, initial: gastosReales[index]);
+    final result = await _openGastoModal(context, initial: _gastosReales[index]);
     if (!mounted || result == null) return;
     await editGastoReal(index, result);
   }
@@ -1203,8 +1203,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     await deleteCategoria(categoria);
     // Also remove gastos with this category
     setState(() {
-      gastosPresupuesto.removeWhere((g) => g.categoria == categoria);
-      gastosReales.removeWhere((g) => g.categoria == categoria);
+      _gastosPresupuesto.removeWhere((g) => g.categoria == categoria);
+      _gastosReales.removeWhere((g) => g.categoria == categoria);
     });
   }
 
@@ -1212,8 +1212,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _IngresosMensualesScreen(
-          items: ingresosReales,
-          gastos: gastosReales,
+          items: _ingresosReales,
+          gastos: _gastosReales,
           onAdd: _addIngresoReal,
           onEdit: _editIngresoReal,
           onDelete: _deleteIngresoReal,
@@ -1249,18 +1249,17 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final views = [
       _ResumenTab(
-        ingresos: ingresosReales,
-        gastos: gastosReales,
-        ingresosPresupuesto: ingresosPresupuesto,
-        gastosPresupuesto: gastosPresupuesto,
+        totalIngresos: _totalIngresosReales,
+        ingresos: _ingresosReales,
+        gastos: _gastosReales,
         onOpenIngresos: _openIngresosScreen,
       ),
       _PresupuestoTab(
-        ingresos: ingresosPresupuesto,
-        gastos: gastosPresupuesto,
+        ingresos: _ingresosPresupuesto,
+        gastos: _gastosPresupuesto,
         ingresosReales: _totalIngresosReales,
         gastosReales: _totalGastosReales,
-        categorias: categoriasGasto.toList(),
+        categorias: _categoriasGasto.toList(),
         onAddIngreso: _addIngresoPresupuesto,
         onEditIngreso: _editIngresoPresupuesto,
         onDeleteIngreso: _deleteIngresoPresupuesto,
@@ -1271,8 +1270,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         onDeleteGasto: _deleteGastoPresupuesto,
       ),
       _IngresosMensualesTab(
-        items: ingresosReales,
-        gastos: gastosReales,
+        items: _ingresosReales,
+        gastos: _gastosReales,
         onAdd: _addIngresoReal,
         onEdit: _editIngresoReal,
         onDelete: _deleteIngresoReal,
@@ -1283,10 +1282,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
       _EstadisticasTab(
         key: const ValueKey('estadisticas-tab'),
-        ingresos: ingresosReales,
-        gastos: gastosReales,
-        ingresosPresupuesto: ingresosPresupuesto,
-        gastosPresupuesto: gastosPresupuesto,
+        ingresos: _ingresosReales,
+        gastos: _gastosReales,
+        ingresosPresupuesto: _ingresosPresupuesto,
+        gastosPresupuesto: _gastosPresupuesto,
       ),
       _PerfilTab(
         onLogout: () {
@@ -1432,8 +1431,8 @@ class _PresupuestoTab extends StatefulWidget {
     required this.onDeleteGasto,
   });
 
-  final List<IngresoMensual> ingresos;
-  final List<GastoMensual> gastos;
+  final List<_IngresoMensual> ingresos;
+  final List<_GastoMensual> gastos;
   final double ingresosReales;
   final double gastosReales;
   final List<String> categorias;
@@ -1553,7 +1552,7 @@ class _IngresosPresupuestoView extends StatelessWidget {
     required this.onDelete,
   });
 
-  final List<IngresoMensual> ingresos;
+  final List<_IngresoMensual> ingresos;
   final double ingresosReales;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
@@ -1719,7 +1718,7 @@ class _GastosPresupuestoView extends StatelessWidget {
     required this.onDeleteGasto,
   });
 
-  final List<GastoMensual> gastos;
+  final List<_GastoMensual> gastos;
   final double gastosReales;
   final List<String> categorias;
   final Future<void> Function() onAddCategoria;
@@ -1795,7 +1794,7 @@ class _GastosPresupuestoView extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final cat = cats[i];
-                        final entries = <MapEntry<int, GastoMensual>>[];
+                        final entries = <MapEntry<int, _GastoMensual>>[];
                         for (var idx = 0; idx < gastos.length; idx++) {
                           final g = gastos[idx];
                           if (g.categoria == cat) {
@@ -2014,10 +2013,10 @@ class _EstadisticasTab extends StatefulWidget {
     required this.gastosPresupuesto,
   });
 
-  final List<IngresoMensual> ingresos;
-  final List<GastoMensual> gastos;
-  final List<IngresoMensual> ingresosPresupuesto;
-  final List<GastoMensual> gastosPresupuesto;
+  final List<_IngresoMensual> ingresos;
+  final List<_GastoMensual> gastos;
+  final List<_IngresoMensual> ingresosPresupuesto;
+  final List<_GastoMensual> gastosPresupuesto;
 
   @override
   State<_EstadisticasTab> createState() => _EstadisticasTabState();
@@ -2466,59 +2465,36 @@ class _EstadisticasTabState extends State<_EstadisticasTab> {
 
 class _ResumenTab extends StatelessWidget {
   const _ResumenTab({
+    required this.totalIngresos,
     required this.ingresos,
     required this.gastos,
-    required this.ingresosPresupuesto,
-    required this.gastosPresupuesto,
     required this.onOpenIngresos,
   });
 
-  final List<IngresoMensual> ingresos;
-  final List<GastoMensual> gastos;
-  final List<IngresoMensual> ingresosPresupuesto;
-  final List<GastoMensual> gastosPresupuesto;
+  final double totalIngresos;
+  final List<_IngresoMensual> ingresos;
+  final List<_GastoMensual> gastos;
   final VoidCallback onOpenIngresos;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     
-    // Calcular totales de PRESUPUESTO
-    final totalIngresosPresupuesto = ingresosPresupuesto.fold(0.0, (sum, i) => sum + i.monto);
-    final totalGastosPresupuesto = gastosPresupuesto.fold(0.0, (sum, g) => sum + g.monto);
+    // Calcular ganancias presupuestadas (ingresos - gastos del presupuesto)
+    final totalIngresosPresupuesto = ingresos.fold(0.0, (sum, i) => sum + i.monto);
+    final totalGastosPresupuesto = gastos.fold(0.0, (sum, g) => sum + g.monto);
     final gananciasPresupuestadas = totalIngresosPresupuesto - totalGastosPresupuesto;
     
-    // Calcular totales de OPERACIONES REALES
-    final totalIngresosReales = ingresos.fold(0.0, (sum, i) => sum + i.monto);
-    final totalGastosReales = gastos.fold(0.0, (sum, g) => sum + g.monto);
-    final gananciasReales = totalIngresosReales - totalGastosReales;
-    
-    // Calcular KPIs del MES ACTUAL (solo datos reales del mes actual)
-    final ahora = DateTime.now();
-    final ingresosDelMes = ingresos.where((i) => 
-      i.mes.year == ahora.year && i.mes.month == ahora.month
-    ).fold(0.0, (sum, i) => sum + i.monto);
-    
-    final gastosDelMes = gastos.where((g) => 
-      g.mes.year == ahora.year && g.mes.month == ahora.month
-    ).fold(0.0, (sum, g) => sum + g.monto);
-    
-    final balanceDelMes = ingresosDelMes - gastosDelMes;
-    final ahorroDelMes = ingresosDelMes > 0 
-      ? (balanceDelMes / ingresosDelMes * 100) 
-      : 0.0;
+    // Calcular ganancias reales (ingresos reales - gastos reales)
+    // Por ahora usamos los mismos datos, pero en producción vendrían de Operaciones
+    final gananciasReales = totalIngresos - totalGastosPresupuesto;
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _KpisGrid(
-            ingresosMes: ingresosDelMes,
-            gastosMes: gastosDelMes,
-            balance: balanceDelMes,
-            ahorro: ahorroDelMes,
-          ),
+          const _KpisGrid(),
           const SizedBox(height: 14),
           // Card de comparación de ganancias
           Card(
@@ -2620,14 +2596,14 @@ class _ResumenTab extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Ingresos: ${_money(totalIngresosReales)}',
+                                'Ingresos: ${_money(totalIngresos)}',
                                 style: const TextStyle(
                                   fontSize: 10,
                                   color: Colors.black54,
                                 ),
                               ),
                               Text(
-                                'Gastos: ${_money(totalGastosReales)}',
+                                'Gastos: ${_money(totalGastosPresupuesto)}',
                                 style: const TextStyle(
                                   fontSize: 10,
                                   color: Colors.black54,
@@ -2683,7 +2659,7 @@ class _ResumenTab extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _IngresosMensualesPreviewCard(
-            total: totalIngresosReales,
+            total: totalIngresos,
             onOpen: onOpenIngresos,
           ),
           const SizedBox(height: 14),
@@ -2700,30 +2676,37 @@ class _ResumenTab extends StatelessWidget {
           const SizedBox(height: 14),
           _CardSection(
             title: 'Balance mensual (últimos 6 meses)',
-            child: SizedBox(
-              height: 220, 
-              child: _BalanceMensualChart(
-                ingresos: ingresos,
-                gastos: gastos,
-              ),
-            ),
+            child: SizedBox(height: 220, child: _BalanceMensualChart()),
           ),
           const SizedBox(height: 14),
           _CardSection(
             title: 'Distribución de gastos',
-            child: SizedBox(
-              height: 220, 
-              child: _DistribucionGastosChart(
-                gastos: gastos,
-              ),
-            ),
+            child: SizedBox(height: 220, child: _DistribucionGastosChart()),
           ),
           const SizedBox(height: 14),
           _CardSection(
             title: 'Actividad reciente',
-            child: _ActividadReciente(
-              ingresos: ingresos,
-              gastos: gastos,
+            child: const Column(
+              children: [
+                _ActividadTile(
+                  icon: Icons.attach_money,
+                  title: 'Ingreso registrado',
+                  subtitle: 'Tipo: Fijo',
+                  value: '+ USD 840',
+                ),
+                _ActividadTile(
+                  icon: Icons.shopping_bag_outlined,
+                  title: 'Gasto registrado',
+                  subtitle: 'Categoría: Hogar',
+                  value: '- USD 310',
+                ),
+                _ActividadTile(
+                  icon: Icons.trending_up,
+                  title: 'Meta de ahorro',
+                  subtitle: 'Progreso: 78% del mes',
+                  value: 'En camino',
+                ),
+              ],
             ),
           ),
         ],
@@ -2872,9 +2855,9 @@ class _CardSection extends StatelessWidget {
   }
 }
 
-enum IngresoTipo { fija, variable, sinEspecificar }
+enum _IngresoTipo { fija, variable, sinEspecificar }
 
-enum GastoPeriodicidad {
+enum _GastoPeriodicidad {
   diario,
   semanal,
   quincenal,
@@ -2885,8 +2868,8 @@ enum GastoPeriodicidad {
   anual,
 }
 
-class GastoMensual {
-  GastoMensual({
+class _GastoMensual {
+  _GastoMensual({
     this.id,
     required this.categoria,
     required this.subCategoria,
@@ -2905,10 +2888,10 @@ class GastoMensual {
   final bool esFijo;
   final bool pagoConTarjeta;
   final bool gastoHormiga;
-  final GastoPeriodicidad periodicidad;
+  final _GastoPeriodicidad periodicidad;
   final DateTime mes;
 
-  GastoMensual copyWith({
+  _GastoMensual copyWith({
     int? id,
     String? categoria,
     String? subCategoria,
@@ -2916,10 +2899,10 @@ class GastoMensual {
     bool? esFijo,
     bool? pagoConTarjeta,
     bool? gastoHormiga,
-    GastoPeriodicidad? periodicidad,
+    _GastoPeriodicidad? periodicidad,
     DateTime? mes,
   }) {
-    return GastoMensual(
+    return _GastoMensual(
       id: id ?? this.id,
       categoria: categoria ?? this.categoria,
       subCategoria: subCategoria ?? this.subCategoria,
@@ -2932,8 +2915,8 @@ class GastoMensual {
     );
   }
 
-  factory GastoMensual.fromJson(Map<String, dynamic> json) {
-    return GastoMensual(
+  factory _GastoMensual.fromJson(Map<String, dynamic> json) {
+    return _GastoMensual(
       id: json['id'],
       categoria: json['categoria'],
       subCategoria: json['sub_categoria'],
@@ -2941,9 +2924,9 @@ class GastoMensual {
       esFijo: json['es_fijo'] ?? false,
       pagoConTarjeta: json['pago_con_tarjeta'] ?? false,
       gastoHormiga: json['gasto_hormiga'] ?? false,
-      periodicidad: GastoPeriodicidad.values.firstWhere(
+      periodicidad: _GastoPeriodicidad.values.firstWhere(
         (e) => e.name == json['periodicidad'],
-        orElse: () => GastoPeriodicidad.mensual,
+        orElse: () => _GastoPeriodicidad.mensual,
       ),
       mes: DateTime.parse(json['mes']),
     );
@@ -2965,8 +2948,8 @@ class GastoMensual {
 }
 
 
-class IngresoMensual {
-  IngresoMensual({
+class _IngresoMensual {
+  _IngresoMensual({
     this.id,
     required this.etiqueta,
     required this.tipo,
@@ -2976,18 +2959,18 @@ class IngresoMensual {
 
   final int? id;
   final String etiqueta;
-  final IngresoTipo tipo;
+  final _IngresoTipo tipo;
   final double monto;
   final DateTime mes;
 
-  IngresoMensual copyWith({
+  _IngresoMensual copyWith({
     int? id,
     String? etiqueta,
-    IngresoTipo? tipo,
+    _IngresoTipo? tipo,
     double? monto,
     DateTime? mes,
   }) {
-    return IngresoMensual(
+    return _IngresoMensual(
       id: id ?? this.id,
       etiqueta: etiqueta ?? this.etiqueta,
       tipo: tipo ?? this.tipo,
@@ -2996,13 +2979,13 @@ class IngresoMensual {
     );
   }
 
-  factory IngresoMensual.fromJson(Map<String, dynamic> json) {
-    return IngresoMensual(
+  factory _IngresoMensual.fromJson(Map<String, dynamic> json) {
+    return _IngresoMensual(
       id: json['id'],
       etiqueta: json['etiqueta'],
-      tipo: IngresoTipo.values.firstWhere(
+      tipo: _IngresoTipo.values.firstWhere(
         (e) => e.name == json['tipo'],
-        orElse: () => IngresoTipo.sinEspecificar,
+        orElse: () => _IngresoTipo.sinEspecificar,
       ),
       monto: double.parse(json['monto'].toString()),
       mes: DateTime.parse(json['mes']),
@@ -3020,13 +3003,13 @@ class IngresoMensual {
   }
 }
 
-enum TipoDeuda {
+enum _TipoDeuda {
   porPagar,
   porCobrar,
 }
 
-class Deuda {
-  Deuda({
+class _Deuda {
+  _Deuda({
     this.id,
     required this.nombre,
     required this.monto,
@@ -3038,19 +3021,19 @@ class Deuda {
   final int? id;
   final String nombre;
   final double monto;
-  final TipoDeuda tipo;
+  final _TipoDeuda tipo;
   final DateTime fecha;
   final String descripcion;
 
-  Deuda copyWith({
+  _Deuda copyWith({
     int? id,
     String? nombre,
     double? monto,
-    TipoDeuda? tipo,
+    _TipoDeuda? tipo,
     DateTime? fecha,
     String? descripcion,
   }) {
-    return Deuda(
+    return _Deuda(
       id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       monto: monto ?? this.monto,
@@ -3060,12 +3043,12 @@ class Deuda {
     );
   }
 
-  factory Deuda.fromJson(Map<String, dynamic> json) {
-    return Deuda(
+  factory _Deuda.fromJson(Map<String, dynamic> json) {
+    return _Deuda(
       id: json['id'],
       nombre: json['concepto'],
       monto: double.parse(json['monto'].toString()),
-      tipo: json['tipo'] == 'por_pagar' ? TipoDeuda.porPagar : TipoDeuda.porCobrar,
+      tipo: json['tipo'] == 'por_pagar' ? _TipoDeuda.porPagar : _TipoDeuda.porCobrar,
       fecha: DateTime.parse(json['fecha']),
       descripcion: '',
     );
@@ -3075,7 +3058,7 @@ class Deuda {
     return {
       'concepto': nombre,
       'monto': monto,
-      'tipo': tipo == TipoDeuda.porPagar ? 'por_pagar' : 'por_cobrar',
+      'tipo': tipo == _TipoDeuda.porPagar ? 'por_pagar' : 'por_cobrar',
       'fecha': fecha.toIso8601String().split('T')[0],
     };
   }
@@ -3147,8 +3130,8 @@ class _IngresosMensualesTab extends StatelessWidget {
     required this.onAddGastosCategoria,
   });
 
-  final List<IngresoMensual> items;
-  final List<GastoMensual> gastos;
+  final List<_IngresoMensual> items;
+  final List<_GastoMensual> gastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
@@ -3186,8 +3169,8 @@ class _IngresosMensualesScreen extends StatefulWidget {
     required this.onAddGastosCategoria,
   });
 
-  final List<IngresoMensual> items;
-  final List<GastoMensual> gastos;
+  final List<_IngresoMensual> items;
+  final List<_GastoMensual> gastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
@@ -3292,8 +3275,8 @@ class _IngresosMensualesView extends StatefulWidget {
     required this.onAddGastosCategoria,
   });
 
-  final List<IngresoMensual> items;
-  final List<GastoMensual> gastos;
+  final List<_IngresoMensual> items;
+  final List<_GastoMensual> gastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
@@ -3489,9 +3472,9 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
-                                  it.tipo == IngresoTipo.fija
+                                  it.tipo == _IngresoTipo.fija
                                       ? Icons.lock_outline
-                                      : it.tipo == IngresoTipo.variable
+                                      : it.tipo == _IngresoTipo.variable
                                       ? Icons.swap_horiz
                                       : Icons.help_outline,
                                   color: colorScheme.primary,
@@ -3597,7 +3580,7 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
 class _IngresoModal extends StatefulWidget {
   const _IngresoModal({this.initial});
 
-  final IngresoMensual? initial;
+  final _IngresoMensual? initial;
 
   @override
   State<_IngresoModal> createState() => _IngresoModalState();
@@ -3607,7 +3590,7 @@ class _IngresoModalState extends State<_IngresoModal> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _etiqueta;
   late final TextEditingController _monto;
-  late IngresoTipo _tipo;
+  late _IngresoTipo _tipo;
   late DateTime _fecha;
 
   @override
@@ -3619,7 +3602,7 @@ class _IngresoModalState extends State<_IngresoModal> {
           ? ''
           : widget.initial!.monto.toStringAsFixed(2),
     );
-    _tipo = widget.initial?.tipo ?? IngresoTipo.sinEspecificar;
+    _tipo = widget.initial?.tipo ?? _IngresoTipo.sinEspecificar;
     _fecha = widget.initial?.mes ?? DateTime.now();
   }
 
@@ -3649,7 +3632,7 @@ class _IngresoModalState extends State<_IngresoModal> {
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final parsed = double.parse(_monto.text.trim().replaceAll(',', '.'));
-    final item = IngresoMensual(
+    final item = _IngresoMensual(
       etiqueta: _etiqueta.text.trim(),
       tipo: _tipo,
       monto: parsed,
@@ -3697,20 +3680,20 @@ class _IngresoModalState extends State<_IngresoModal> {
               },
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<IngresoTipo>(
+            DropdownButtonFormField<_IngresoTipo>(
               value: _tipo,
               decoration: const InputDecoration(
                 labelText: 'Tipo de ganancia',
                 prefixIcon: Icon(Icons.category_outlined),
               ),
               items: const [
-                DropdownMenuItem(value: IngresoTipo.fija, child: Text('Fija')),
+                DropdownMenuItem(value: _IngresoTipo.fija, child: Text('Fija')),
                 DropdownMenuItem(
-                  value: IngresoTipo.variable,
+                  value: _IngresoTipo.variable,
                   child: Text('Variable'),
                 ),
                 DropdownMenuItem(
-                  value: IngresoTipo.sinEspecificar,
+                  value: _IngresoTipo.sinEspecificar,
                   child: Text('Sin especificar'),
                 ),
               ],
@@ -3772,7 +3755,7 @@ class _IngresoModalState extends State<_IngresoModal> {
 class _GastoModal extends StatefulWidget {
   const _GastoModal({this.initial});
 
-  final GastoMensual? initial;
+  final _GastoMensual? initial;
 
   @override
   State<_GastoModal> createState() => _GastoModalState();
@@ -3786,7 +3769,7 @@ class _GastoModalState extends State<_GastoModal> {
   late bool _esFijo;
   late bool _pagoConTarjeta;
   late bool _gastoHormiga;
-  late GastoPeriodicidad _periodicidad;
+  late _GastoPeriodicidad _periodicidad;
   late DateTime _fecha;
 
   @override
@@ -3804,7 +3787,7 @@ class _GastoModalState extends State<_GastoModal> {
     _esFijo = widget.initial?.esFijo ?? false;
     _pagoConTarjeta = widget.initial?.pagoConTarjeta ?? false;
     _gastoHormiga = widget.initial?.gastoHormiga ?? false;
-    _periodicidad = widget.initial?.periodicidad ?? GastoPeriodicidad.mensual;
+    _periodicidad = widget.initial?.periodicidad ?? _GastoPeriodicidad.mensual;
     _fecha = widget.initial?.mes ?? DateTime.now();
   }
 
@@ -3835,7 +3818,7 @@ class _GastoModalState extends State<_GastoModal> {
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final parsed = double.parse(_monto.text.trim().replaceAll(',', '.'));
-    final item = GastoMensual(
+    final item = _GastoMensual(
       categoria: _categoria.text.trim(),
       subCategoria: _subCategoria.text.trim(),
       monto: parsed,
@@ -3902,13 +3885,13 @@ class _GastoModalState extends State<_GastoModal> {
               },
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<GastoPeriodicidad>(
+            DropdownButtonFormField<_GastoPeriodicidad>(
               value: _periodicidad,
               decoration: const InputDecoration(
                 labelText: 'Periodicidad',
                 prefixIcon: Icon(Icons.calendar_month_outlined),
               ),
-              items: GastoPeriodicidad.values
+              items: _GastoPeriodicidad.values
                   .map(
                     (v) => DropdownMenuItem(
                       value: v,
@@ -4091,11 +4074,11 @@ Future<String?> _openCategoriaModal(BuildContext context) {
   ).whenComplete(controller.dispose);
 }
 
-Future<List<GastoMensual>?> _openMultiGastoModal(
+Future<List<_GastoMensual>?> _openMultiGastoModal(
   BuildContext context, {
   required String categoria,
 }) {
-  return showModalBottomSheet<List<GastoMensual>>(
+  return showModalBottomSheet<List<_GastoMensual>>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -4105,11 +4088,11 @@ Future<List<GastoMensual>?> _openMultiGastoModal(
   );
 }
 
-Future<GastoMensual?> _openGastoModal(
+Future<_GastoMensual?> _openGastoModal(
   BuildContext context, {
-  GastoMensual? initial,
+  _GastoMensual? initial,
 }) {
-  return showModalBottomSheet<GastoMensual>(
+  return showModalBottomSheet<_GastoMensual>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -4430,11 +4413,11 @@ class _DeskPainter extends CustomPainter {
   }
 }
 
-Future<IngresoMensual?> _openIngresoModal(
+Future<_IngresoMensual?> _openIngresoModal(
   BuildContext context, {
-  IngresoMensual? initial,
+  _IngresoMensual? initial,
 }) {
-  return showModalBottomSheet<IngresoMensual>(
+  return showModalBottomSheet<_IngresoMensual>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -4444,34 +4427,34 @@ Future<IngresoMensual?> _openIngresoModal(
   );
 }
 
-String _tipoLabel(IngresoTipo tipo) {
+String _tipoLabel(_IngresoTipo tipo) {
   switch (tipo) {
-    case IngresoTipo.fija:
+    case _IngresoTipo.fija:
       return 'Fija';
-    case IngresoTipo.variable:
+    case _IngresoTipo.variable:
       return 'Variable';
-    case IngresoTipo.sinEspecificar:
+    case _IngresoTipo.sinEspecificar:
       return 'Sin especificar';
   }
 }
 
-String _periodicidadLabel(GastoPeriodicidad v) {
+String _periodicidadLabel(_GastoPeriodicidad v) {
   switch (v) {
-    case GastoPeriodicidad.diario:
+    case _GastoPeriodicidad.diario:
       return 'Diario';
-    case GastoPeriodicidad.semanal:
+    case _GastoPeriodicidad.semanal:
       return 'Semanal';
-    case GastoPeriodicidad.quincenal:
+    case _GastoPeriodicidad.quincenal:
       return 'Quincenal';
-    case GastoPeriodicidad.mensual:
+    case _GastoPeriodicidad.mensual:
       return 'Mensual';
-    case GastoPeriodicidad.bimestral:
+    case _GastoPeriodicidad.bimestral:
       return 'Bimestral';
-    case GastoPeriodicidad.trimestral:
+    case _GastoPeriodicidad.trimestral:
       return 'Trimestral';
-    case GastoPeriodicidad.semestral:
+    case _GastoPeriodicidad.semestral:
       return 'Semestral';
-    case GastoPeriodicidad.anual:
+    case _GastoPeriodicidad.anual:
       return 'Anual';
   }
 }
@@ -4482,48 +4465,38 @@ String _money(double value) {
 }
 
 class _KpisGrid extends StatelessWidget {
-  const _KpisGrid({
-    required this.ingresosMes,
-    required this.gastosMes,
-    required this.balance,
-    required this.ahorro,
-  });
-
-  final double ingresosMes;
-  final double gastosMes;
-  final double balance;
-  final double ahorro;
+  const _KpisGrid();
 
   @override
   Widget build(BuildContext context) {
-    final items = [
+    const items = [
       _Kpi(
         title: 'Ingresos (mes)',
-        value: _money(ingresosMes),
-        delta: 'Mes actual',
+        value: 'USD 4,820',
+        delta: '+12.4%',
         icon: Icons.attach_money,
-        color: const Color(0xFF1565C0),
+        color: Color(0xFF1565C0),
       ),
       _Kpi(
         title: 'Gastos (mes)',
-        value: _money(gastosMes),
-        delta: 'Mes actual',
+        value: 'USD 2,110',
+        delta: '-3.1%',
         icon: Icons.shopping_bag_outlined,
-        color: const Color(0xFF6A1B9A),
+        color: Color(0xFF6A1B9A),
       ),
       _Kpi(
         title: 'Balance',
-        value: _money(balance),
-        delta: balance >= 0 ? 'Positivo' : 'Negativo',
+        value: 'USD 2,710',
+        delta: '+18.2%',
         icon: Icons.account_balance_wallet,
-        color: balance >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F),
+        color: Color(0xFF2E7D32),
       ),
       _Kpi(
         title: 'Ahorro',
-        value: '${ahorro.toStringAsFixed(1)}%',
-        delta: 'De ingresos',
+        value: '56.2%',
+        delta: 'Del presupuesto',
         icon: Icons.savings_outlined,
-        color: const Color(0xFFEF6C00),
+        color: Color(0xFFEF6C00),
       ),
     ];
 
@@ -4631,68 +4604,6 @@ class _Kpi extends StatelessWidget {
   }
 }
 
-class _ActividadReciente extends StatelessWidget {
-  const _ActividadReciente({
-    required this.ingresos,
-    required this.gastos,
-  });
-
-  final List<IngresoMensual> ingresos;
-  final List<GastoMensual> gastos;
-
-  @override
-  Widget build(BuildContext context) {
-    // Obtener los últimos 3 movimientos (ingresos y gastos combinados)
-    final movimientos = <Map<String, dynamic>>[];
-    
-    for (final ingreso in ingresos) {
-      movimientos.add({
-        'tipo': 'ingreso',
-        'fecha': ingreso.mes,
-        'titulo': 'Ingreso registrado',
-        'subtitulo': 'Tipo: ${ingreso.tipo.name}',
-        'valor': '+ ${_money(ingreso.monto)}',
-        'icon': Icons.attach_money,
-      });
-    }
-    
-    for (final gasto in gastos) {
-      movimientos.add({
-        'tipo': 'gasto',
-        'fecha': gasto.mes,
-        'titulo': 'Gasto registrado',
-        'subtitulo': 'Categoría: ${gasto.categoria}',
-        'valor': '- ${_money(gasto.monto)}',
-        'icon': Icons.shopping_bag_outlined,
-      });
-    }
-    
-    // Ordenar por fecha descendente
-    movimientos.sort((a, b) => (b['fecha'] as DateTime).compareTo(a['fecha'] as DateTime));
-    
-    // Tomar solo los últimos 3
-    final ultimos = movimientos.take(3).toList();
-    
-    if (ultimos.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('No hay actividad reciente'),
-      );
-    }
-    
-    return Column(
-      children: ultimos.map((mov) {
-        return _ActividadTile(
-          icon: mov['icon'] as IconData,
-          title: mov['titulo'] as String,
-          subtitle: mov['subtitulo'] as String,
-          value: mov['valor'] as String,
-        );
-      }).toList(),
-    );
-  }
-}
-
 class _ActividadTile extends StatelessWidget {
   const _ActividadTile({
     required this.icon,
@@ -4744,54 +4655,30 @@ class _ActividadTile extends StatelessWidget {
 }
 
 class _BalanceMensualChart extends StatelessWidget {
-  const _BalanceMensualChart({
-    required this.ingresos,
-    required this.gastos,
-  });
-
-  final List<IngresoMensual> ingresos;
-  final List<GastoMensual> gastos;
+  const _BalanceMensualChart();
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     
-    // Calcular datos de los últimos 6 meses
-    final ahora = DateTime.now();
-    final meses = <DateTime>[];
-    for (int i = 5; i >= 0; i--) {
-      final mes = DateTime(ahora.year, ahora.month - i, 1);
-      meses.add(mes);
-    }
+    // Datos simulados de balance de los últimos 6 meses
+    const ingresosPoints = <FlSpot>[
+      FlSpot(0, 4.2),
+      FlSpot(1, 4.5),
+      FlSpot(2, 4.3),
+      FlSpot(3, 4.8),
+      FlSpot(4, 5.1),
+      FlSpot(5, 4.9),
+    ];
     
-    // Calcular ingresos y gastos por mes
-    final ingresosPoints = <FlSpot>[];
-    final gastosPoints = <FlSpot>[];
-    double maxValue = 1000.0;
-    
-    for (int i = 0; i < meses.length; i++) {
-      final mes = meses[i];
-      
-      final ingresosDelMes = ingresos
-          .where((ing) => ing.mes.year == mes.year && ing.mes.month == mes.month)
-          .fold(0.0, (sum, ing) => sum + ing.monto);
-      
-      final gastosDelMes = gastos
-          .where((g) => g.mes.year == mes.year && g.mes.month == mes.month)
-          .fold(0.0, (sum, g) => sum + g.monto);
-      
-      ingresosPoints.add(FlSpot(i.toDouble(), ingresosDelMes / 1000));
-      gastosPoints.add(FlSpot(i.toDouble(), gastosDelMes / 1000));
-      
-      if (ingresosDelMes > maxValue) maxValue = ingresosDelMes;
-      if (gastosDelMes > maxValue) maxValue = gastosDelMes;
-    }
-    
-    final labels = meses.map((m) {
-      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
-                            'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      return mesesNombres[m.month - 1];
-    }).toList();
+    const gastosPoints = <FlSpot>[
+      FlSpot(0, 2.8),
+      FlSpot(1, 3.1),
+      FlSpot(2, 2.9),
+      FlSpot(3, 3.3),
+      FlSpot(4, 3.0),
+      FlSpot(5, 3.2),
+    ];
 
     return LineChart(
       LineChartData(
@@ -4821,6 +4708,7 @@ class _BalanceMensualChart extends StatelessWidget {
               showTitles: true,
               interval: 1,
               getTitlesWidget: (v, meta) {
+                const labels = ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene'];
                 final i = v.toInt();
                 if (i < 0 || i >= labels.length) return const SizedBox.shrink();
                 return Padding(
@@ -4875,120 +4763,83 @@ class _BalanceMensualChart extends StatelessWidget {
             ),
           ),
         ],
-        minY: 0,
-        maxY: (maxValue / 1000 * 1.2).ceilToDouble(),
+        minY: 2.0,
+        maxY: 6.0,
       ),
     );
   }
 }
 
 class _DistribucionGastosChart extends StatelessWidget {
-  const _DistribucionGastosChart({
-    required this.gastos,
-  });
-
-  final List<GastoMensual> gastos;
+  const _DistribucionGastosChart();
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     
-    // Agrupar gastos por categoría
-    final gastosPorCategoria = <String, double>{};
-    for (final gasto in gastos) {
-      gastosPorCategoria[gasto.categoria] = 
-          (gastosPorCategoria[gasto.categoria] ?? 0) + gasto.monto;
-    }
-    
-    if (gastosPorCategoria.isEmpty) {
-      return const Center(
-        child: Text('No hay gastos registrados'),
+    BarChartGroupData bar(int x, double y, Color color) {
+      return BarChartGroupData(
+        x: x,
+        barRods: [
+          BarChartRodData(
+            toY: y,
+            width: 22,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+            color: color,
+          ),
+        ],
       );
     }
-    
-    final total = gastosPorCategoria.values.fold(0.0, (sum, val) => sum + val);
-    
-    final sections = gastosPorCategoria.entries.map((entry) {
-      final porcentaje = (entry.value / total * 100);
-      final colores = [
-        colorScheme.primary,
-        colorScheme.secondary,
-        colorScheme.tertiary,
-        Colors.orange,
-        Colors.purple,
-        Colors.teal,
-      ];
-      final index = gastosPorCategoria.keys.toList().indexOf(entry.key);
-      final color = colores[index % colores.length];
-      
-      return PieChartSectionData(
-        value: entry.value,
-        title: '${porcentaje.toStringAsFixed(1)}%',
-        color: color,
-        radius: 60,
-        titleStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-      );
-    }).toList();
 
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: PieChart(
-            PieChartData(
-              sections: sections,
-              sectionsSpace: 2,
-              centerSpaceRadius: 40,
+    final groups = <BarChartGroupData>[
+      bar(0, 1.2, colorScheme.primary),
+      bar(1, 0.8, colorScheme.secondary),
+      bar(2, 1.5, colorScheme.tertiary),
+      bar(3, 0.6, colorScheme.error.withOpacity(0.7)),
+      bar(4, 0.4, const Color(0xFFEF6C00)),
+    ];
+
+    return BarChart(
+      BarChartData(
+        borderData: FlBorderData(show: false),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
+        titlesData: FlTitlesData(
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '\$${value.toStringAsFixed(1)}K',
+                  style: const TextStyle(fontSize: 11),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (v, meta) {
+                const labels = ['Hogar', 'Trans', 'Alim', 'Serv', 'Otros'];
+                final i = v.toInt();
+                if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(labels[i], style: const TextStyle(fontSize: 11)),
+                );
+              },
             ),
           ),
         ),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: gastosPorCategoria.entries.map((entry) {
-              final index = gastosPorCategoria.keys.toList().indexOf(entry.key);
-              final colores = [
-                colorScheme.primary,
-                colorScheme.secondary,
-                colorScheme.tertiary,
-                Colors.orange,
-                Colors.purple,
-                Colors.teal,
-              ];
-              final color = colores[index % colores.length];
-              
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        entry.key,
-                        style: const TextStyle(fontSize: 11),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+        barGroups: groups,
+        maxY: 2.0,
+      ),
     );
   }
 }
@@ -6153,7 +6004,7 @@ class _DistribucionGastosEstadisticasChart extends StatelessWidget {
     required this.gastos,
   });
 
-  final List<GastoMensual> gastos;
+  final List<_GastoMensual> gastos;
 
   @override
   Widget build(BuildContext context) {
@@ -6455,7 +6306,7 @@ class _DeudasScreen extends StatelessWidget {
     required this.onDelete,
   });
 
-  final List<Deuda> deudas;
+  final List<_Deuda> deudas;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
@@ -6464,8 +6315,8 @@ class _DeudasScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     
-    final deudasPorPagar = deudas.where((d) => d.tipo == TipoDeuda.porPagar).toList();
-    final deudasPorCobrar = deudas.where((d) => d.tipo == TipoDeuda.porCobrar).toList();
+    final deudasPorPagar = deudas.where((d) => d.tipo == _TipoDeuda.porPagar).toList();
+    final deudasPorCobrar = deudas.where((d) => d.tipo == _TipoDeuda.porCobrar).toList();
     
     final totalPorPagar = deudasPorPagar.fold(0.0, (sum, d) => sum + d.monto);
     final totalPorCobrar = deudasPorCobrar.fold(0.0, (sum, d) => sum + d.monto);
@@ -6691,7 +6542,7 @@ class _DeudaTile extends StatelessWidget {
     required this.onDelete,
   });
 
-  final Deuda deuda;
+  final _Deuda deuda;
   final Color color;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -6715,7 +6566,7 @@ class _DeudaTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              deuda.tipo == TipoDeuda.porPagar
+              deuda.tipo == _TipoDeuda.porPagar
                   ? Icons.arrow_upward
                   : Icons.arrow_downward,
               color: color,
@@ -6794,8 +6645,8 @@ class _DeudaTile extends StatelessWidget {
   }
 }
 
-Future<Deuda?> _openDeudaModal(BuildContext context, {Deuda? initial}) {
-  return showModalBottomSheet<Deuda>(
+Future<_Deuda?> _openDeudaModal(BuildContext context, {_Deuda? initial}) {
+  return showModalBottomSheet<_Deuda>(
     context: context,
     isScrollControlled: true,
     builder: (_) => _DeudaModal(initial: initial),
@@ -6805,7 +6656,7 @@ Future<Deuda?> _openDeudaModal(BuildContext context, {Deuda? initial}) {
 class _DeudaModal extends StatefulWidget {
   const _DeudaModal({this.initial});
 
-  final Deuda? initial;
+  final _Deuda? initial;
 
   @override
   State<_DeudaModal> createState() => _DeudaModalState();
@@ -6816,7 +6667,7 @@ class _DeudaModalState extends State<_DeudaModal> {
   late final TextEditingController _nombre;
   late final TextEditingController _monto;
   late final TextEditingController _descripcion;
-  late TipoDeuda _tipo;
+  late _TipoDeuda _tipo;
   late DateTime _fecha;
 
   @override
@@ -6829,7 +6680,7 @@ class _DeudaModalState extends State<_DeudaModal> {
     _descripcion = TextEditingController(
       text: widget.initial?.descripcion ?? '',
     );
-    _tipo = widget.initial?.tipo ?? TipoDeuda.porPagar;
+    _tipo = widget.initial?.tipo ?? _TipoDeuda.porPagar;
     _fecha = widget.initial?.fecha ?? DateTime.now();
   }
 
@@ -6849,7 +6700,7 @@ class _DeudaModalState extends State<_DeudaModal> {
     final monto = double.parse(montoRaw);
     final descripcion = _descripcion.text.trim();
 
-    final deuda = Deuda(
+    final deuda = _Deuda(
       nombre: nombre,
       monto: monto,
       tipo: _tipo,
@@ -6882,7 +6733,7 @@ class _DeudaModalState extends State<_DeudaModal> {
                   ),
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<TipoDeuda>(
+            DropdownButtonFormField<_TipoDeuda>(
               value: _tipo,
               decoration: const InputDecoration(
                 labelText: 'Tipo de deuda',
@@ -6890,11 +6741,11 @@ class _DeudaModalState extends State<_DeudaModal> {
               ),
               items: const [
                 DropdownMenuItem(
-                  value: TipoDeuda.porPagar,
+                  value: _TipoDeuda.porPagar,
                   child: Text('Por Pagar'),
                 ),
                 DropdownMenuItem(
-                  value: TipoDeuda.porCobrar,
+                  value: _TipoDeuda.porCobrar,
                   child: Text('Por Cobrar'),
                 ),
               ],
@@ -7154,7 +7005,7 @@ class _ComparacionGananciasChart extends StatelessWidget {
 class _DistribucionIngresosChart extends StatelessWidget {
   const _DistribucionIngresosChart({required this.ingresos});
 
-  final List<IngresoMensual> ingresos;
+  final List<_IngresoMensual> ingresos;
 
   @override
   Widget build(BuildContext context) {
@@ -7170,10 +7021,10 @@ class _DistribucionIngresosChart extends StatelessWidget {
     }
 
     final ingresosFijos = ingresos
-        .where((i) => i.tipo == IngresoTipo.fija)
+        .where((i) => i.tipo == _IngresoTipo.fija)
         .fold(0.0, (sum, i) => sum + i.monto);
     final ingresosVariables = ingresos
-        .where((i) => i.tipo != IngresoTipo.fija)
+        .where((i) => i.tipo != _IngresoTipo.fija)
         .fold(0.0, (sum, i) => sum + i.monto);
 
     return Padding(
