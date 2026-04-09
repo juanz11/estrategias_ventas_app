@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gastos
     Route::apiResource('gastos', GastoController::class);
+    Route::delete('/gastos/{gasto}/archivo', [GastoController::class, 'eliminarArchivo']);
 
     // Categorías de gastos
     Route::apiResource('categorias-gasto', CategoriaGastoController::class);
@@ -30,4 +31,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // Deudas
     Route::apiResource('deudas', DeudaController::class);
     Route::get('/deudas-vencidas-hoy', [DeudaController::class, 'vencidasHoy']);
+    Route::delete('/deudas/{deuda}/archivo', [DeudaController::class, 'eliminarArchivo']);
 });

@@ -21,6 +21,9 @@ class Gasto extends Model
         'periodicidad',
         'mes',
         'es_presupuesto',
+        'archivo_path',
+        'archivo_nombre',
+        'archivo_tipo',
     ];
 
     protected $casts = [

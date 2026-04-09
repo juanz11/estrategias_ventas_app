@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, File;
 
 class ApiService {
   // Para Android Emulator usa 10.0.2.2, para iOS/macOS/Web usa 127.0.0.1
@@ -38,6 +38,7 @@ class ApiService {
   // Headers con autenticación
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
@@ -49,7 +50,7 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
 
@@ -187,7 +188,7 @@ class ApiService {
     }
   }
 
-  // CREAR GASTO
+  // CREAR GASTO (con archivo opcional)
   Future<Map<String, dynamic>> createGasto({
     required String categoria,
     required String subCategoria,
@@ -198,7 +199,31 @@ class ApiService {
     required String periodicidad,
     required DateTime mes,
     required bool esPresupuesto,
+    File? archivo,
   }) async {
+    if (archivo != null) {
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/gastos'));
+      request.headers['Authorization'] = 'Bearer $_token';
+      request.headers['Accept'] = 'application/json';
+      request.fields['categoria'] = categoria;
+      request.fields['sub_categoria'] = subCategoria;
+      request.fields['monto'] = monto.toString();
+      request.fields['es_fijo'] = esFijo ? '1' : '0';
+      request.fields['pago_con_tarjeta'] = pagoConTarjeta ? '1' : '0';
+      request.fields['gasto_hormiga'] = gastoHormiga ? '1' : '0';
+      request.fields['periodicidad'] = periodicidad;
+      request.fields['mes'] = mes.toIso8601String().split('T')[0];
+      request.fields['es_presupuesto'] = esPresupuesto ? '1' : '0';
+      final ext = archivo.path.split('.').last.toLowerCase();
+      final mime = ext == 'pdf' ? 'application/pdf' : 'image/$ext';
+      request.files.add(await http.MultipartFile.fromPath('archivo', archivo.path,
+          contentType: http.MediaType.parse(mime)));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 201) return jsonDecode(response.body);
+      throw Exception('Error al crear gasto: ${response.body}');
+    }
+
     final response = await http.post(
       Uri.parse('$baseUrl/gastos'),
       headers: _headers,
@@ -214,12 +239,8 @@ class ApiService {
         'es_presupuesto': esPresupuesto,
       }),
     );
-
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Error al crear gasto: ${response.body}');
-    }
+    if (response.statusCode == 201) return jsonDecode(response.body);
+    throw Exception('Error al crear gasto: ${response.body}');
   }
 
   // ACTUALIZAR GASTO
@@ -278,6 +299,21 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Error al crear categoría');
+    }
+  }
+
+  // ACTUALIZAR CATEGORIA
+  Future<Map<String, dynamic>> updateCategoria(int id, String nombre) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/categorias-gasto/$id'),
+      headers: _headers,
+      body: jsonEncode({'nombre': nombre}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al actualizar categoría: ${response.body}');
     }
   }
 
@@ -373,6 +409,85 @@ class ApiService {
 
     if (response.statusCode != 200) {
       throw Exception('Error al eliminar deuda');
+    }
+  }
+
+  // SUBIR ARCHIVO A GASTO (PUT con multipart)
+  Future<Map<String, dynamic>> subirArchivoGasto(int gastoId, File archivo,
+      {Map<String, dynamic>? extraFields}) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/gastos/$gastoId'));
+    request.headers['Authorization'] = 'Bearer $_token';
+    request.headers['Accept'] = 'application/json';
+    request.fields['_method'] = 'PUT';
+
+    if (extraFields != null) {
+      extraFields.forEach((k, v) {
+        if (v != null) request.fields[k] = v.toString();
+      });
+    }
+
+    final ext = archivo.path.split('.').last.toLowerCase();
+    final mime = ext == 'pdf' ? 'application/pdf' : 'image/$ext';
+    request.files.add(await http.MultipartFile.fromPath('archivo', archivo.path,
+        contentType: http.MediaType.parse(mime)));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Error al subir archivo: ${response.body}');
+  }
+
+  // ELIMINAR ARCHIVO DE GASTO
+  Future<Map<String, dynamic>> eliminarArchivoGasto(int gastoId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/gastos/$gastoId/archivo'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Error al eliminar archivo');
+  }
+
+  // SUBIR ARCHIVO A DEUDA
+  Future<Map<String, dynamic>> subirArchivoDeuda(int deudaId, File archivo) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/deudas/$deudaId'),
+    );
+
+    request.headers['Authorization'] = 'Bearer $_token';
+    request.headers['Accept'] = 'application/json';
+    request.fields['_method'] = 'PUT'; // Laravel method spoofing
+
+    final extension = archivo.path.split('.').last.toLowerCase();
+    final mimeType = ['pdf'].contains(extension) ? 'application/pdf' : 'image/$extension';
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'archivo',
+      archivo.path,
+      contentType: http.MediaType.parse(mimeType),
+    ));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al subir archivo: ${response.body}');
+    }
+  }
+
+  // ELIMINAR ARCHIVO DE DEUDA
+  Future<Map<String, dynamic>> eliminarArchivoDeuda(int deudaId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/deudas/$deudaId/archivo'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al eliminar archivo');
     }
   }
 }

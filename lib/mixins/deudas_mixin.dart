@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../services/api_service.dart';
 import '../main.dart';
 
 /// Mixin para operaciones CRUD de deudas
-/// Requiere que la clase que lo use también use DataLoaderMixin
 mixin DeudasMixin<T extends StatefulWidget> on State<T> {
   ApiService get apiService;
   List<Deuda> get deudas;
   set deudas(List<Deuda> value);
 
-  // ========== DEUDAS ==========
-
-  Future<void> addDeuda(Deuda deuda) async {
+  Future<void> addDeuda(Deuda deuda, {File? archivo}) async {
     try {
       final json = await apiService.createDeuda(
         concepto: deuda.nombre,
@@ -20,7 +18,14 @@ mixin DeudasMixin<T extends StatefulWidget> on State<T> {
         tipo: deuda.tipo == TipoDeuda.porPagar ? 'por_pagar' : 'por_cobrar',
       );
 
-      final nuevaDeuda = Deuda.fromJson(json);
+      var nuevaDeuda = Deuda.fromJson(json);
+
+      // Subir archivo si se seleccionó uno
+      if (archivo != null && nuevaDeuda.id != null) {
+        final jsonConArchivo = await apiService.subirArchivoDeuda(nuevaDeuda.id!, archivo);
+        nuevaDeuda = Deuda.fromJson(jsonConArchivo);
+      }
+
       setState(() {
         deudas = [...deudas, nuevaDeuda];
       });
@@ -40,16 +45,19 @@ mixin DeudasMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  Future<void> editDeuda(int index, Deuda deuda) async {
+  Future<void> editDeuda(int index, Deuda deuda, {File? archivo}) async {
     final deudaActual = deudas[index];
 
     try {
-      final json = await apiService.updateDeuda(
-        deudaActual.id!,
-        deuda.toJson(),
-      );
+      final json = await apiService.updateDeuda(deudaActual.id!, deuda.toJson());
+      var updated = Deuda.fromJson(json);
 
-      final updated = Deuda.fromJson(json);
+      // Subir nuevo archivo si se seleccionó uno
+      if (archivo != null && updated.id != null) {
+        final jsonConArchivo = await apiService.subirArchivoDeuda(updated.id!, archivo);
+        updated = Deuda.fromJson(jsonConArchivo);
+      }
+
       setState(() {
         final list = [...deudas];
         list[index] = updated;
@@ -97,11 +105,6 @@ mixin DeudasMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  // ========== OBTENER DEUDAS VENCIDAS ==========
-  
-  /// Obtiene las deudas vencidas hoy desde la API
-  /// Retorna una lista de deudas para que la clase que use el mixin
-  /// pueda mostrar la UI como prefiera
   Future<List<Deuda>> obtenerDeudasVencidasHoy() async {
     try {
       final deudasVencidas = await apiService.getDeudasVencidasHoy();

@@ -33,6 +33,39 @@ mixin CategoriasMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  Future<void> editCategoria(String nombreActual, String nuevoNombre) async {
+    try {
+      final categoriasData = await apiService.getCategorias();
+      final categoria = categoriasData.firstWhere(
+        (c) => c['nombre'] == nombreActual,
+        orElse: () => null,
+      );
+
+      if (categoria != null && categoria['id'] != null) {
+        await apiService.updateCategoria(categoria['id'], nuevoNombre);
+        setState(() {
+          final set = Set<String>.from(categoriasGasto);
+          set.remove(nombreActual);
+          set.add(nuevoNombre);
+          categoriasGasto = set;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Categoría renombrada')),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error renombrando categoría: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al renombrar: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> deleteCategoria(String nombre) async {
     try {
       // Primero necesitamos obtener el ID de la categoría

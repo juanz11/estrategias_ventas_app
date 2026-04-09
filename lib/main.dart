@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import 'services/api_service.dart';
 import 'mixins/data_loader_mixin.dart';
 import 'mixins/ingresos_mixin.dart';
@@ -111,8 +114,8 @@ class _MultiGastoModalState extends State<_MultiGastoModal> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -409,6 +412,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (!mounted) return;
+    
     setState(() {
       _error = null;
       _loading = true;
@@ -427,8 +432,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      setState(() => _loading = false);
-      Navigator.of(context).pushReplacement(
+      // Navegar primero, luego actualizar estado
+      await Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } catch (e) {
@@ -588,12 +593,14 @@ class _GastosGroupedCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAddToCategoria,
+    this.onEditCategoria,
   });
 
   final List<GastoMensual> gastos;
   final Future<void> Function(int index) onEdit;
   final void Function(int index) onDelete;
   final Future<void> Function(String categoria) onAddToCategoria;
+  final Future<void> Function(String categoria)? onEditCategoria;
 
   @override
   Widget build(BuildContext context) {
@@ -652,16 +659,21 @@ class _GastosGroupedCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          TextButton.icon(
-                            onPressed: () {
-                              onAddToCategoria(cat);
-                            },
-                            icon: const Icon(Icons.add),
-                            label: const Text('Agregar gasto'),
-                          ),
                           Text(
                             _money(subtotal),
                             style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (value) {
+                              if (value == 'agregar') onAddToCategoria(cat);
+                              if (value == 'editar') onEditCategoria?.call(cat);
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'agregar', child: ListTile(leading: Icon(Icons.add), title: Text('Agregar gasto'))),
+                              if (onEditCategoria != null)
+                                const PopupMenuItem(value: 'editar', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Renombrar'))),
+                            ],
                           ),
                         ],
                       ),
@@ -769,8 +781,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    initializeData().then((_) {
-      _verificarDeudasHoy();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        initializeData().then((_) {
+          if (mounted) _verificarDeudasHoy();
+        });
+      }
     });
   }
 
@@ -843,23 +859,28 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _addDeuda() async {
     final result = await _openDeudaModal(context);
     if (!mounted || result == null) return;
-    await addDeuda(result);
     
-    // Verificar si la deuda es para hoy
+    final deuda = result['deuda'] as Deuda;
+    final archivo = result['archivo'] as File?;
+    
+    await addDeuda(deuda, archivo: archivo);
+    
     final hoy = DateTime.now();
-    final esHoy = result.fecha.year == hoy.year &&
-        result.fecha.month == hoy.month &&
-        result.fecha.day == hoy.day;
+    final esHoy = deuda.fecha.year == hoy.year &&
+        deuda.fecha.month == hoy.month &&
+        deuda.fecha.day == hoy.day;
     
-    if (esHoy) {
-      _mostrarAlertaDeuda(result);
-    }
+    if (esHoy) _mostrarAlertaDeuda(deuda);
   }
 
   Future<void> _editDeuda(int index) async {
     final result = await _openDeudaModal(context, initial: deudas[index]);
     if (!mounted || result == null) return;
-    await editDeuda(index, result);
+
+    final deuda = result['deuda'] as Deuda;
+    final archivo = result['archivo'] as File?;
+
+    await editDeuda(index, deuda, archivo: archivo);
   }
 
   void _deleteDeuda(int index) {
@@ -1127,7 +1148,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _editGastoPresupuesto(int index) async {
     final result = await _openGastoModal(context, initial: gastosPresupuesto[index]);
     if (!mounted || result == null) return;
-    await editGastoPresupuesto(index, result);
+    final gasto = result['gasto'] as GastoMensual;
+    final archivo = result['archivo'] as File?;
+    await editGastoPresupuesto(index, gasto, archivo: archivo);
   }
 
   Future<void> _deleteGastoPresupuesto(int index) async {
@@ -1157,13 +1180,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _addGastoReal() async {
     final result = await _openGastoModal(context);
     if (!mounted || result == null) return;
-    await addGastoReal(result);
+    final gasto = result['gasto'] as GastoMensual;
+    final archivo = result['archivo'] as File?;
+    await addGastoReal(gasto, archivo: archivo);
   }
 
   Future<void> _editGastoReal(int index) async {
     final result = await _openGastoModal(context, initial: gastosReales[index]);
     if (!mounted || result == null) return;
-    await editGastoReal(index, result);
+    final gasto = result['gasto'] as GastoMensual;
+    final archivo = result['archivo'] as File?;
+    await editGastoReal(index, gasto, archivo: archivo);
   }
 
   void _deleteGastoReal(int index) {
@@ -1196,6 +1223,27 @@ class _DashboardScreenState extends State<DashboardScreen>
     await addCategoria(trimmed);
   }
 
+  Future<void> _editCategoriaGasto(String categoriaActual) async {
+    final nuevoNombre = await _openRenombreCategoriaModal(context, categoriaActual);
+    if (!mounted || nuevoNombre == null) return;
+    final trimmed = nuevoNombre.trim();
+    if (trimmed.isEmpty || trimmed == categoriaActual) return;
+    await editCategoria(categoriaActual, trimmed);
+    // Actualizar gastos locales que tengan la categoria vieja
+    setState(() {
+      for (var i = 0; i < gastosPresupuesto.length; i++) {
+        if (gastosPresupuesto[i].categoria == categoriaActual) {
+          gastosPresupuesto[i] = gastosPresupuesto[i].copyWith(categoria: trimmed);
+        }
+      }
+      for (var i = 0; i < gastosReales.length; i++) {
+        if (gastosReales[i].categoria == categoriaActual) {
+          gastosReales[i] = gastosReales[i].copyWith(categoria: trimmed);
+        }
+      }
+    });
+  }
+
   Future<void> _deleteCategoriaGasto(String categoria) async {
     final ok = await _confirmDeleteCategoria(context, categoria);
     if (ok != true) return;
@@ -1221,9 +1269,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           onEditGasto: _editGastoReal,
           onDeleteGasto: _deleteGastoReal,
           onAddGastosCategoria: _addGastosCategoriaReal,
+          onEditCategoria: _editCategoriaGasto,
         ),
       ),
-    );
+    ).then((_) {
+      if (mounted) loadAllData();
+    });
   }
 
   @override
@@ -1266,6 +1317,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         onDeleteIngreso: _deleteIngresoPresupuesto,
         onAddCategoria: _addCategoriaGasto,
         onDeleteCategoria: _deleteCategoriaGasto,
+        onEditCategoria: _editCategoriaGasto,
         onAddToCategoria: _addGastosToCategoria,
         onEditGasto: _editGastoPresupuesto,
         onDeleteGasto: _deleteGastoPresupuesto,
@@ -1280,6 +1332,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         onEditGasto: _editGastoReal,
         onDeleteGasto: _deleteGastoReal,
         onAddGastosCategoria: _addGastosCategoriaReal,
+        onEditCategoria: _editCategoriaGasto,
       ),
       _EstadisticasTab(
         key: const ValueKey('estadisticas-tab'),
@@ -1427,6 +1480,7 @@ class _PresupuestoTab extends StatefulWidget {
     required this.onDeleteIngreso,
     required this.onAddCategoria,
     required this.onDeleteCategoria,
+    required this.onEditCategoria,
     required this.onAddToCategoria,
     required this.onEditGasto,
     required this.onDeleteGasto,
@@ -1442,6 +1496,7 @@ class _PresupuestoTab extends StatefulWidget {
   final void Function(int index) onDeleteIngreso;
   final Future<void> Function() onAddCategoria;
   final Future<void> Function(String categoria) onDeleteCategoria;
+  final Future<void> Function(String categoria) onEditCategoria;
   final Future<void> Function(String categoria) onAddToCategoria;
   final Future<void> Function(int index) onEditGasto;
   final Future<void> Function(int index) onDeleteGasto;
@@ -1532,6 +1587,7 @@ class _PresupuestoTabState extends State<_PresupuestoTab> with SingleTickerProvi
                 categorias: widget.categorias,
                 onAddCategoria: widget.onAddCategoria,
                 onDeleteCategoria: widget.onDeleteCategoria,
+                onEditCategoria: widget.onEditCategoria,
                 onAddToCategoria: widget.onAddToCategoria,
                 onEditGasto: widget.onEditGasto,
                 onDeleteGasto: widget.onDeleteGasto,
@@ -1714,6 +1770,7 @@ class _GastosPresupuestoView extends StatelessWidget {
     required this.categorias,
     required this.onAddCategoria,
     required this.onDeleteCategoria,
+    required this.onEditCategoria,
     required this.onAddToCategoria,
     required this.onEditGasto,
     required this.onDeleteGasto,
@@ -1724,6 +1781,7 @@ class _GastosPresupuestoView extends StatelessWidget {
   final List<String> categorias;
   final Future<void> Function() onAddCategoria;
   final Future<void> Function(String categoria) onDeleteCategoria;
+  final Future<void> Function(String categoria) onEditCategoria;
   final Future<void> Function(String categoria) onAddToCategoria;
   final Future<void> Function(int index) onEditGasto;
   final Future<void> Function(int index) onDeleteGasto;
@@ -1829,25 +1887,24 @@ class _GastosPresupuestoView extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  IconButton(
-                                    tooltip: 'Eliminar categoría',
-                                    onPressed: () {
-                                      onDeleteCategoria(cat);
-                                    },
-                                    icon: const Icon(Icons.delete_outline),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: () {
-                                      onAddToCategoria(cat);
-                                    },
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Agregar'),
-                                  ),
                                   Text(
                                     _money(subtotal),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w900,
                                     ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    icon: const Icon(Icons.more_vert),
+                                    onSelected: (value) {
+                                      if (value == 'editar') onEditCategoria(cat);
+                                      if (value == 'eliminar') onDeleteCategoria(cat);
+                                      if (value == 'agregar') onAddToCategoria(cat);
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'agregar', child: ListTile(leading: Icon(Icons.add), title: Text('Agregar gasto'))),
+                                      PopupMenuItem(value: 'editar', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Renombrar'))),
+                                      PopupMenuItem(value: 'eliminar', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar'))),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -2896,6 +2953,9 @@ class GastoMensual {
     required this.gastoHormiga,
     required this.periodicidad,
     DateTime? mes,
+    this.archivoUrl,
+    this.archivoNombre,
+    this.archivoTipo,
   }) : mes = mes ?? DateTime.now();
 
   final int? id;
@@ -2907,6 +2967,11 @@ class GastoMensual {
   final bool gastoHormiga;
   final GastoPeriodicidad periodicidad;
   final DateTime mes;
+  final String? archivoUrl;
+  final String? archivoNombre;
+  final String? archivoTipo;
+
+  bool get tieneArchivo => archivoUrl != null && archivoUrl!.isNotEmpty;
 
   GastoMensual copyWith({
     int? id,
@@ -2918,6 +2983,9 @@ class GastoMensual {
     bool? gastoHormiga,
     GastoPeriodicidad? periodicidad,
     DateTime? mes,
+    String? archivoUrl,
+    String? archivoNombre,
+    String? archivoTipo,
   }) {
     return GastoMensual(
       id: id ?? this.id,
@@ -2929,6 +2997,9 @@ class GastoMensual {
       gastoHormiga: gastoHormiga ?? this.gastoHormiga,
       periodicidad: periodicidad ?? this.periodicidad,
       mes: mes ?? this.mes,
+      archivoUrl: archivoUrl ?? this.archivoUrl,
+      archivoNombre: archivoNombre ?? this.archivoNombre,
+      archivoTipo: archivoTipo ?? this.archivoTipo,
     );
   }
 
@@ -2946,6 +3017,9 @@ class GastoMensual {
         orElse: () => GastoPeriodicidad.mensual,
       ),
       mes: DateTime.parse(json['mes']),
+      archivoUrl: json['archivo_url'],
+      archivoNombre: json['archivo_nombre'],
+      archivoTipo: json['archivo_tipo'],
     );
   }
 
@@ -3033,6 +3107,9 @@ class Deuda {
     required this.tipo,
     DateTime? fecha,
     this.descripcion = '',
+    this.archivoUrl,
+    this.archivoNombre,
+    this.archivoTipo,
   }) : fecha = fecha ?? DateTime.now();
 
   final int? id;
@@ -3041,6 +3118,11 @@ class Deuda {
   final TipoDeuda tipo;
   final DateTime fecha;
   final String descripcion;
+  final String? archivoUrl;
+  final String? archivoNombre;
+  final String? archivoTipo; // 'image' o 'pdf'
+
+  bool get tieneArchivo => archivoUrl != null && archivoUrl!.isNotEmpty;
 
   Deuda copyWith({
     int? id,
@@ -3049,6 +3131,9 @@ class Deuda {
     TipoDeuda? tipo,
     DateTime? fecha,
     String? descripcion,
+    String? archivoUrl,
+    String? archivoNombre,
+    String? archivoTipo,
   }) {
     return Deuda(
       id: id ?? this.id,
@@ -3057,6 +3142,9 @@ class Deuda {
       tipo: tipo ?? this.tipo,
       fecha: fecha ?? this.fecha,
       descripcion: descripcion ?? this.descripcion,
+      archivoUrl: archivoUrl ?? this.archivoUrl,
+      archivoNombre: archivoNombre ?? this.archivoNombre,
+      archivoTipo: archivoTipo ?? this.archivoTipo,
     );
   }
 
@@ -3068,6 +3156,9 @@ class Deuda {
       tipo: json['tipo'] == 'por_pagar' ? TipoDeuda.porPagar : TipoDeuda.porCobrar,
       fecha: DateTime.parse(json['fecha']),
       descripcion: '',
+      archivoUrl: json['archivo_url'],
+      archivoNombre: json['archivo_nombre'],
+      archivoTipo: json['archivo_tipo'],
     );
   }
 
@@ -3145,6 +3236,7 @@ class _IngresosMensualesTab extends StatelessWidget {
     required this.onEditGasto,
     required this.onDeleteGasto,
     required this.onAddGastosCategoria,
+    required this.onEditCategoria,
   });
 
   final List<IngresoMensual> items;
@@ -3156,6 +3248,7 @@ class _IngresosMensualesTab extends StatelessWidget {
   final Future<void> Function(int index) onEditGasto;
   final void Function(int index) onDeleteGasto;
   final Future<void> Function(String categoria) onAddGastosCategoria;
+  final Future<void> Function(String categoria) onEditCategoria;
 
   @override
   Widget build(BuildContext context) {
@@ -3169,6 +3262,7 @@ class _IngresosMensualesTab extends StatelessWidget {
       onEditGasto: onEditGasto,
       onDeleteGasto: onDeleteGasto,
       onAddGastosCategoria: onAddGastosCategoria,
+      onEditCategoria: onEditCategoria,
     );
   }
 }
@@ -3184,6 +3278,7 @@ class _IngresosMensualesScreen extends StatefulWidget {
     required this.onEditGasto,
     required this.onDeleteGasto,
     required this.onAddGastosCategoria,
+    required this.onEditCategoria,
   });
 
   final List<IngresoMensual> items;
@@ -3195,6 +3290,7 @@ class _IngresosMensualesScreen extends StatefulWidget {
   final Future<void> Function(int index) onEditGasto;
   final void Function(int index) onDeleteGasto;
   final Future<void> Function(String categoria) onAddGastosCategoria;
+  final Future<void> Function(String categoria) onEditCategoria;
 
   @override
   State<_IngresosMensualesScreen> createState() =>
@@ -3202,6 +3298,16 @@ class _IngresosMensualesScreen extends StatefulWidget {
 }
 
 class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
+  late List<IngresoMensual> _items;
+  late List<GastoMensual> _gastos;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = List.from(widget.items);
+    _gastos = List.from(widget.gastos);
+  }
+
   Future<void> _confirmDeleteGasto(int index) async {
     final ok = await _confirmDeleteIngreso(context);
     if (ok != true) return;
@@ -3217,41 +3323,47 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
   Future<void> _addAndRefresh() async {
     await widget.onAdd();
     if (!mounted) return;
-    setState(() {});
+    setState(() => _items = List.from(widget.items));
   }
 
   Future<void> _editAndRefresh(int index) async {
     await widget.onEdit(index);
     if (!mounted) return;
-    setState(() {});
+    setState(() => _items = List.from(widget.items));
   }
 
   void _deleteAndRefresh(int index) {
     widget.onDelete(index);
     if (!mounted) return;
-    setState(() {});
+    setState(() => _items = List.from(widget.items));
   }
 
   Future<void> _addGastoAndRefresh() async {
     await widget.onAddGasto();
     if (!mounted) return;
-    setState(() {});
+    setState(() => _gastos = List.from(widget.gastos));
   }
 
   Future<void> _editGastoAndRefresh(int index) async {
     await widget.onEditGasto(index);
     if (!mounted) return;
-    setState(() {});
+    setState(() => _gastos = List.from(widget.gastos));
   }
 
   void _deleteGastoAndRefresh(int index) {
     widget.onDeleteGasto(index);
     if (!mounted) return;
-    setState(() {});
+    setState(() => _gastos = List.from(widget.gastos));
   }
 
   Future<void> _addGastosCategoriaAndRefresh(String categoria) async {
     await widget.onAddGastosCategoria(categoria);
+    if (!mounted) return;
+    setState(() => _gastos = List.from(widget.gastos));
+  }
+
+  Future<void> _editCategoriaAndRefresh(String categoria) async {
+    await widget.onEditCategoria(categoria);
     if (!mounted) return;
     setState(() {});
   }
@@ -3262,8 +3374,8 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
       appBar: AppBar(title: const Text('Operaciones')),
       body: SafeArea(
         child: _IngresosMensualesView(
-          items: widget.items,
-          gastos: widget.gastos,
+          items: _items,
+          gastos: _gastos,
           onAdd: _addAndRefresh,
           onEdit: _editAndRefresh,
           onDelete: _confirmDelete,
@@ -3271,6 +3383,7 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
           onEditGasto: _editGastoAndRefresh,
           onDeleteGasto: _confirmDeleteGasto,
           onAddGastosCategoria: _addGastosCategoriaAndRefresh,
+          onEditCategoria: _editCategoriaAndRefresh,
         ),
       ),
     );
@@ -3290,6 +3403,7 @@ class _IngresosMensualesView extends StatefulWidget {
     required this.onEditGasto,
     required this.onDeleteGasto,
     required this.onAddGastosCategoria,
+    required this.onEditCategoria,
   });
 
   final List<IngresoMensual> items;
@@ -3301,6 +3415,7 @@ class _IngresosMensualesView extends StatefulWidget {
   final Future<void> Function(int index) onEditGasto;
   final void Function(int index) onDeleteGasto;
   final Future<void> Function(String categoria) onAddGastosCategoria;
+  final Future<void> Function(String categoria) onEditCategoria;
 
   @override
   State<_IngresosMensualesView> createState() => _IngresosMensualesViewState();
@@ -3563,6 +3678,7 @@ class _IngresosMensualesViewState extends State<_IngresosMensualesView> {
               onEdit: widget.onEditGasto,
               onDelete: widget.onDeleteGasto,
               onAddToCategoria: widget.onAddGastosCategoria,
+              onEditCategoria: widget.onEditCategoria,
             ),
           const SizedBox(height: 14),
           Container(
@@ -3660,7 +3776,7 @@ class _IngresoModalState extends State<_IngresoModal> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -3671,98 +3787,100 @@ class _IngresoModalState extends State<_IngresoModal> {
       ),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.initial == null ? 'Agregar ingreso' : 'Editar ingreso',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _etiqueta,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Etiqueta',
-                hintText: 'Ej: Salario mensual / Ganancia p2p',
-                prefixIcon: Icon(Icons.label_outline),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.initial == null ? 'Agregar ingreso' : 'Editar ingreso',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
-              validator: (v) {
-                final text = (v ?? '').trim();
-                if (text.isEmpty) return 'Escribe una etiqueta.';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<IngresoTipo>(
-              value: _tipo,
-              decoration: const InputDecoration(
-                labelText: 'Tipo de ganancia',
-                prefixIcon: Icon(Icons.category_outlined),
-              ),
-              items: const [
-                DropdownMenuItem(value: IngresoTipo.fija, child: Text('Fija')),
-                DropdownMenuItem(
-                  value: IngresoTipo.variable,
-                  child: Text('Variable'),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _etiqueta,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Etiqueta',
+                  hintText: 'Ej: Salario mensual / Ganancia p2p',
+                  prefixIcon: Icon(Icons.label_outline),
                 ),
-                DropdownMenuItem(
-                  value: IngresoTipo.sinEspecificar,
-                  child: Text('Sin especificar'),
+                validator: (v) {
+                  final text = (v ?? '').trim();
+                  if (text.isEmpty) return 'Escribe una etiqueta.';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<IngresoTipo>(
+                value: _tipo,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de ganancia',
+                  prefixIcon: Icon(Icons.category_outlined),
                 ),
-              ],
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _tipo = v);
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _monto,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+                items: const [
+                  DropdownMenuItem(value: IngresoTipo.fija, child: Text('Fija')),
+                  DropdownMenuItem(
+                    value: IngresoTipo.variable,
+                    child: Text('Variable'),
+                  ),
+                  DropdownMenuItem(
+                    value: IngresoTipo.sinEspecificar,
+                    child: Text('Sin especificar'),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _tipo = v);
+                },
               ),
-              decoration: const InputDecoration(
-                labelText: 'Monto',
-                hintText: 'Ej: 1200.00',
-                prefixIcon: Icon(Icons.attach_money),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _monto,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Monto',
+                  hintText: 'Ej: 1200.00',
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                validator: (v) {
+                  final raw = (v ?? '').trim();
+                  if (raw.isEmpty) return 'Ingresa un monto.';
+                  final normalized = raw.replaceAll(',', '.');
+                  final parsed = double.tryParse(normalized);
+                  if (parsed == null) return 'Monto inválido.';
+                  if (parsed < 0) return 'No puede ser negativo.';
+                  return null;
+                },
+                onFieldSubmitted: (_) => _save(),
               ),
-              validator: (v) {
-                final raw = (v ?? '').trim();
-                if (raw.isEmpty) return 'Ingresa un monto.';
-                final normalized = raw.replaceAll(',', '.');
-                final parsed = double.tryParse(normalized);
-                if (parsed == null) return 'Monto inválido.';
-                if (parsed < 0) return 'No puede ser negativo.';
-                return null;
-              },
-              onFieldSubmitted: (_) => _save(),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Fecha'),
-              subtitle: Text(_formatearFecha(_fecha)),
-              onTap: _seleccionarFecha,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey.shade400),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Fecha'),
+                subtitle: Text(_formatearFecha(_fecha)),
+                onTap: _seleccionarFecha,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade400),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: _save,
-                icon: const Icon(Icons.check),
-                label: const Text('Guardar'),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.check),
+                  label: const Text('Guardar'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -3788,18 +3906,16 @@ class _GastoModalState extends State<_GastoModal> {
   late bool _gastoHormiga;
   late GastoPeriodicidad _periodicidad;
   late DateTime _fecha;
+  File? _archivoSeleccionado;
+  String? _archivoNombre;
 
   @override
   void initState() {
     super.initState();
     _categoria = TextEditingController(text: widget.initial?.categoria ?? '');
-    _subCategoria = TextEditingController(
-      text: widget.initial?.subCategoria ?? '',
-    );
+    _subCategoria = TextEditingController(text: widget.initial?.subCategoria ?? '');
     _monto = TextEditingController(
-      text: widget.initial == null
-          ? ''
-          : widget.initial!.monto.toStringAsFixed(2),
+      text: widget.initial == null ? '' : widget.initial!.monto.toStringAsFixed(2),
     );
     _esFijo = widget.initial?.esFijo ?? false;
     _pagoConTarjeta = widget.initial?.pagoConTarjeta ?? false;
@@ -3827,8 +3943,19 @@ class _GastoModalState extends State<_GastoModal> {
       cancelText: 'Cancelar',
       confirmText: 'Aceptar',
     );
-    if (picked != null) {
-      setState(() => _fecha = picked);
+    if (picked != null) setState(() => _fecha = picked);
+  }
+
+  Future<void> _seleccionarArchivo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+    );
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _archivoSeleccionado = File(result.files.single.path!);
+        _archivoNombre = result.files.single.name;
+      });
     }
   }
 
@@ -3836,6 +3963,7 @@ class _GastoModalState extends State<_GastoModal> {
     if (!_formKey.currentState!.validate()) return;
     final parsed = double.parse(_monto.text.trim().replaceAll(',', '.'));
     final item = GastoMensual(
+      id: widget.initial?.id,
       categoria: _categoria.text.trim(),
       subCategoria: _subCategoria.text.trim(),
       monto: parsed,
@@ -3845,12 +3973,12 @@ class _GastoModalState extends State<_GastoModal> {
       periodicidad: _periodicidad,
       mes: _fecha,
     );
-    Navigator.of(context).pop(item);
+    Navigator.of(context).pop({'gasto': item, 'archivo': _archivoSeleccionado});
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -3861,129 +3989,170 @@ class _GastoModalState extends State<_GastoModal> {
       ),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.initial == null ? 'Agregar gasto' : 'Editar gasto',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _categoria,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Categoría',
-                hintText: 'Ej: Hogar / Transporte / Deporte',
-                prefixIcon: Icon(Icons.folder_outlined),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.initial == null ? 'Agregar gasto' : 'Editar gasto',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
-              validator: (v) {
-                final text = (v ?? '').trim();
-                if (text.isEmpty) return 'Escribe una categoría.';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _subCategoria,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Sub Categoría',
-                hintText: 'Ej: Gasolina / Internet / Gym',
-                prefixIcon: Icon(Icons.label_outline),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _categoria,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Categoría',
+                  hintText: 'Ej: Hogar / Transporte / Deporte',
+                  prefixIcon: Icon(Icons.folder_outlined),
+                ),
+                validator: (v) {
+                  final text = (v ?? '').trim();
+                  if (text.isEmpty) return 'Escribe una categoría.';
+                  return null;
+                },
               ),
-              validator: (v) {
-                final text = (v ?? '').trim();
-                if (text.isEmpty) return 'Escribe una sub categoría.';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<GastoPeriodicidad>(
-              value: _periodicidad,
-              decoration: const InputDecoration(
-                labelText: 'Periodicidad',
-                prefixIcon: Icon(Icons.calendar_month_outlined),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _subCategoria,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Sub Categoría',
+                  hintText: 'Ej: Gasolina / Internet / Gym',
+                  prefixIcon: Icon(Icons.label_outline),
+                ),
+                validator: (v) {
+                  final text = (v ?? '').trim();
+                  if (text.isEmpty) return 'Escribe una sub categoría.';
+                  return null;
+                },
               ),
-              items: GastoPeriodicidad.values
-                  .map(
-                    (v) => DropdownMenuItem(
-                      value: v,
-                      child: Text(_periodicidadLabel(v)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _periodicidad = v);
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _monto,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+              const SizedBox(height: 12),
+              DropdownButtonFormField<GastoPeriodicidad>(
+                value: _periodicidad,
+                decoration: const InputDecoration(
+                  labelText: 'Periodicidad',
+                  prefixIcon: Icon(Icons.calendar_month_outlined),
+                ),
+                items: GastoPeriodicidad.values
+                    .map(
+                      (v) => DropdownMenuItem(
+                        value: v,
+                        child: Text(_periodicidadLabel(v)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _periodicidad = v);
+                },
               ),
-              decoration: const InputDecoration(
-                labelText: 'Monto del gasto',
-                hintText: 'Ej: 25.00',
-                prefixIcon: Icon(Icons.attach_money),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _monto,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Monto del gasto',
+                  hintText: 'Ej: 25.00',
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                validator: (v) {
+                  final raw = (v ?? '').trim();
+                  if (raw.isEmpty) return 'Ingresa un monto.';
+                  final normalized = raw.replaceAll(',', '.');
+                  final parsed = double.tryParse(normalized);
+                  if (parsed == null) return 'Monto inválido.';
+                  if (parsed < 0) return 'No puede ser negativo.';
+                  return null;
+                },
+                onFieldSubmitted: (_) => _save(),
               ),
-              validator: (v) {
-                final raw = (v ?? '').trim();
-                if (raw.isEmpty) return 'Ingresa un monto.';
-                final normalized = raw.replaceAll(',', '.');
-                final parsed = double.tryParse(normalized);
-                if (parsed == null) return 'Monto inválido.';
-                if (parsed < 0) return 'No puede ser negativo.';
-                return null;
-              },
-              onFieldSubmitted: (_) => _save(),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: _esFijo,
-              onChanged: (v) => setState(() => _esFijo = v),
-              title: const Text('Gasto fijo'),
-            ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: _pagoConTarjeta,
-              onChanged: (v) => setState(() => _pagoConTarjeta = v),
-              title: const Text('Pago con tarjeta'),
-            ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: _gastoHormiga,
-              onChanged: (v) => setState(() => _gastoHormiga = v),
-              title: const Text('Gasto hormiga'),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Fecha'),
-              subtitle: Text(_formatearFecha(_fecha)),
-              onTap: _seleccionarFecha,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey.shade400),
+              const SizedBox(height: 12),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _esFijo,
+                onChanged: (v) => setState(() => _esFijo = v),
+                title: const Text('Gasto fijo'),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: _save,
-                icon: const Icon(Icons.check),
-                label: const Text('Guardar'),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _pagoConTarjeta,
+                onChanged: (v) => setState(() => _pagoConTarjeta = v),
+                title: const Text('Pago con tarjeta'),
               ),
-            ),
-          ],
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _gastoHormiga,
+                onChanged: (v) => setState(() => _gastoHormiga = v),
+                title: const Text('Gasto hormiga'),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Fecha'),
+                subtitle: Text(_formatearFecha(_fecha)),
+                onTap: _seleccionarFecha,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade400),
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _seleccionarArchivo,
+                icon: const Icon(Icons.attach_file),
+                label: Text(
+                  _archivoNombre ??
+                      (widget.initial?.archivoNombre != null
+                          ? 'Cambiar: ${widget.initial!.archivoNombre}'
+                          : 'Adjuntar imagen o PDF (opcional)'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                style: OutlinedButton.styleFrom(alignment: Alignment.centerLeft),
+              ),
+              if (_archivoSeleccionado != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          _archivoNombre ?? '',
+                          style: const TextStyle(fontSize: 12, color: Colors.green),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: () => setState(() {
+                          _archivoSeleccionado = null;
+                          _archivoNombre = null;
+                        }),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.check),
+                  label: const Text('Guardar'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -4058,6 +4227,36 @@ Future<bool?> _confirmDeleteCategoria(BuildContext context, String categoria) {
   );
 }
 
+Future<String?> _openRenombreCategoriaModal(BuildContext context, String nombreActual) {
+  final controller = TextEditingController(text: nombreActual);
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Renombrar categoría'),
+        content: TextField(
+          controller: controller,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'Nuevo nombre',
+          ),
+          onSubmitted: (_) => Navigator.of(ctx).pop(controller.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('Guardar'),
+          ),
+        ],
+      );
+    },
+  ).whenComplete(controller.dispose);
+}
+
 Future<String?> _openCategoriaModal(BuildContext context) {
   final controller = TextEditingController();
   return showDialog<String>(
@@ -4105,11 +4304,11 @@ Future<List<GastoMensual>?> _openMultiGastoModal(
   );
 }
 
-Future<GastoMensual?> _openGastoModal(
+Future<Map<String, dynamic>?> _openGastoModal(
   BuildContext context, {
   GastoMensual? initial,
 }) {
-  return showModalBottomSheet<GastoMensual>(
+  return showModalBottomSheet<Map<String, dynamic>>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -6447,6 +6646,76 @@ class _EvolucionAnualChart extends StatelessWidget {
   }
 }
 
+void _verArchivoDeuda(BuildContext context, Deuda deuda) {
+  if (!deuda.tieneArchivo) return;
+  
+  showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppBar(
+            title: Text(deuda.archivoNombre ?? 'Archivo adjunto'),
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          if (deuda.archivoTipo == 'image')
+            Flexible(
+              child: Image.network(
+                deuda.archivoUrl!,
+                fit: BoxFit.contain,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const Icon(Icons.picture_as_pdf, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    deuda.archivoNombre ?? 'Documento PDF',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final uri = Uri.parse(deuda.archivoUrl!);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Abrir PDF'),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
 class _DeudasScreen extends StatelessWidget {
   const _DeudasScreen({
     required this.deudas,
@@ -6644,6 +6913,7 @@ class _DeudasScreen extends StatelessWidget {
                           color: Colors.red.shade700,
                           onEdit: () => onEdit(deudaIndex),
                           onDelete: () => onDelete(deudaIndex),
+                          onVerArchivo: () => _verArchivoDeuda(context, deuda),
                         );
                       },
                     ),
@@ -6672,6 +6942,7 @@ class _DeudasScreen extends StatelessWidget {
                           color: Colors.green.shade700,
                           onEdit: () => onEdit(deudaIndex),
                           onDelete: () => onDelete(deudaIndex),
+                          onVerArchivo: () => _verArchivoDeuda(context, deuda),
                         );
                       },
                     ),
@@ -6689,12 +6960,14 @@ class _DeudaTile extends StatelessWidget {
     required this.color,
     required this.onEdit,
     required this.onDelete,
+    required this.onVerArchivo,
   });
 
   final Deuda deuda;
   final Color color;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onVerArchivo;
 
   @override
   Widget build(BuildContext context) {
@@ -6727,30 +7000,58 @@ class _DeudaTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  deuda.nombre,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        deuda.nombre,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (deuda.tieneArchivo)
+                      GestureDetector(
+                        onTap: onVerArchivo,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                deuda.archivoTipo == 'pdf'
+                                    ? Icons.picture_as_pdf
+                                    : Icons.image_outlined,
+                                size: 14,
+                                color: color,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Ver',
+                                style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 if (deuda.descripcion.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     deuda.descripcion,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ],
                 const SizedBox(height: 2),
                 Text(
                   _formatearFecha(deuda.fecha),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.black38,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: Colors.black38),
                 ),
               ],
             ),
@@ -6794,8 +7095,8 @@ class _DeudaTile extends StatelessWidget {
   }
 }
 
-Future<Deuda?> _openDeudaModal(BuildContext context, {Deuda? initial}) {
-  return showModalBottomSheet<Deuda>(
+Future<Map<String, dynamic>?> _openDeudaModal(BuildContext context, {Deuda? initial}) {
+  return showModalBottomSheet<Map<String, dynamic>>(
     context: context,
     isScrollControlled: true,
     builder: (_) => _DeudaModal(initial: initial),
@@ -6818,6 +7119,9 @@ class _DeudaModalState extends State<_DeudaModal> {
   late final TextEditingController _descripcion;
   late TipoDeuda _tipo;
   late DateTime _fecha;
+  File? _archivoSeleccionado;
+  String? _archivoNombre;
+  bool _subiendoArchivo = false;
 
   @override
   void initState() {
@@ -6841,6 +7145,20 @@ class _DeudaModalState extends State<_DeudaModal> {
     super.dispose();
   }
 
+  Future<void> _seleccionarArchivo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _archivoSeleccionado = File(result.files.single.path!);
+        _archivoNombre = result.files.single.name;
+      });
+    }
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -6850,14 +7168,19 @@ class _DeudaModalState extends State<_DeudaModal> {
     final descripcion = _descripcion.text.trim();
 
     final deuda = Deuda(
+      id: widget.initial?.id,
       nombre: nombre,
       monto: monto,
       tipo: _tipo,
       fecha: _fecha,
       descripcion: descripcion,
+      archivoUrl: widget.initial?.archivoUrl,
+      archivoNombre: widget.initial?.archivoNombre,
+      archivoTipo: widget.initial?.archivoTipo,
     );
 
-    Navigator.of(context).pop(deuda);
+    // Retornar deuda y archivo seleccionado juntos
+    Navigator.of(context).pop({'deuda': deuda, 'archivo': _archivoSeleccionado});
   }
 
   @override
@@ -6867,14 +7190,15 @@ class _DeudaModalState extends State<_DeudaModal> {
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
       ),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             Text(
               widget.initial == null ? 'Agregar Deuda' : 'Editar Deuda',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -6969,6 +7293,48 @@ class _DeudaModalState extends State<_DeudaModal> {
                 }
               },
             ),
+            const SizedBox(height: 4),
+            // Sección de archivo adjunto
+            OutlinedButton.icon(
+              onPressed: _seleccionarArchivo,
+              icon: const Icon(Icons.attach_file),
+              label: Text(
+                _archivoNombre ?? 
+                (widget.initial?.archivoNombre != null 
+                    ? 'Cambiar: ${widget.initial!.archivoNombre}' 
+                    : 'Adjuntar imagen o PDF'),
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+              ),
+            ),
+            if (_archivoSeleccionado != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        _archivoNombre ?? '',
+                        style: const TextStyle(fontSize: 12, color: Colors.green),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () => setState(() {
+                        _archivoSeleccionado = null;
+                        _archivoNombre = null;
+                      }),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -6981,13 +7347,14 @@ class _DeudaModalState extends State<_DeudaModal> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
-                    onPressed: _save,
+                    onPressed: _subiendoArchivo ? null : _save,
                     child: const Text('Guardar'),
                   ),
                 ),
               ],
             ),
           ],
+        ),
         ),
       ),
     );

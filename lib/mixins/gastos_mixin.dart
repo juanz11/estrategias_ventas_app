@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show File;
 import '../services/api_service.dart';
 import '../main.dart';
 
@@ -13,7 +14,7 @@ mixin GastosMixin<T extends StatefulWidget> on State<T> {
 
   // ========== GASTOS REALES (Operaciones) ==========
 
-  Future<void> addGastoReal(GastoMensual gasto) async {
+  Future<void> addGastoReal(GastoMensual gasto, {File? archivo}) async {
     try {
       final json = await apiService.createGasto(
         categoria: gasto.categoria,
@@ -25,6 +26,7 @@ mixin GastosMixin<T extends StatefulWidget> on State<T> {
         periodicidad: gasto.periodicidad.name,
         mes: gasto.mes,
         esPresupuesto: false,
+        archivo: archivo,
       );
 
       final nuevoGasto = GastoMensual.fromJson(json);
@@ -47,14 +49,17 @@ mixin GastosMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  Future<void> editGastoReal(int index, GastoMensual gasto) async {
+  Future<void> editGastoReal(int index, GastoMensual gasto, {File? archivo}) async {
     final gastoActual = gastosReales[index];
-
     try {
-      final json = await apiService.updateGasto(
-        gastoActual.id!,
-        gasto.toJson(esPresupuesto: false),
-      );
+      final Map<String, dynamic> json;
+      if (archivo != null) {
+        // Usar multipart para subir archivo
+        json = await apiService.subirArchivoGasto(gastoActual.id!, archivo,
+            extraFields: gasto.toJson(esPresupuesto: false));
+      } else {
+        json = await apiService.updateGasto(gastoActual.id!, gasto.toJson(esPresupuesto: false));
+      }
 
       final updated = GastoMensual.fromJson(json);
       setState(() {
@@ -106,7 +111,7 @@ mixin GastosMixin<T extends StatefulWidget> on State<T> {
 
   // ========== GASTOS PRESUPUESTO ==========
 
-  Future<void> addGastoPresupuesto(GastoMensual gasto) async {
+  Future<void> addGastoPresupuesto(GastoMensual gasto, {File? archivo}) async {
     try {
       final json = await apiService.createGasto(
         categoria: gasto.categoria,
@@ -118,6 +123,7 @@ mixin GastosMixin<T extends StatefulWidget> on State<T> {
         periodicidad: gasto.periodicidad.name,
         mes: gasto.mes,
         esPresupuesto: true,
+        archivo: archivo,
       );
 
       final nuevoGasto = GastoMensual.fromJson(json);
@@ -140,14 +146,16 @@ mixin GastosMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  Future<void> editGastoPresupuesto(int index, GastoMensual gasto) async {
+  Future<void> editGastoPresupuesto(int index, GastoMensual gasto, {File? archivo}) async {
     final gastoActual = gastosPresupuesto[index];
-
     try {
-      final json = await apiService.updateGasto(
-        gastoActual.id!,
-        gasto.toJson(esPresupuesto: true),
-      );
+      final Map<String, dynamic> json;
+      if (archivo != null) {
+        json = await apiService.subirArchivoGasto(gastoActual.id!, archivo,
+            extraFields: gasto.toJson(esPresupuesto: true));
+      } else {
+        json = await apiService.updateGasto(gastoActual.id!, gasto.toJson(esPresupuesto: true));
+      }
 
       final updated = GastoMensual.fromJson(json);
       setState(() {
