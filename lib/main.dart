@@ -1515,6 +1515,16 @@ class _PresupuestoTabState extends State<_PresupuestoTab> with SingleTickerProvi
   }
 
   @override
+  void didUpdateWidget(_PresupuestoTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Forzar rebuild cuando cambian los datos
+    if (oldWidget.gastos != widget.gastos ||
+        oldWidget.ingresos != widget.ingresos) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
@@ -3075,7 +3085,7 @@ class IngresoMensual {
       id: json['id'],
       etiqueta: json['etiqueta'],
       tipo: IngresoTipo.values.firstWhere(
-        (e) => e.name == json['tipo'],
+        (e) => _tipoToApi(e) == json['tipo'],
         orElse: () => IngresoTipo.sinEspecificar,
       ),
       monto: double.parse(json['monto'].toString()),
@@ -3086,11 +3096,19 @@ class IngresoMensual {
   Map<String, dynamic> toJson({required bool esPresupuesto}) {
     return {
       'etiqueta': etiqueta,
-      'tipo': tipo.name,
+      'tipo': _tipoToApi(tipo),
       'monto': monto,
       'mes': mes.toIso8601String().split('T')[0],
       'es_presupuesto': esPresupuesto,
     };
+  }
+}
+
+String _tipoToApi(IngresoTipo tipo) {
+  switch (tipo) {
+    case IngresoTipo.fija: return 'fija';
+    case IngresoTipo.variable: return 'variable';
+    case IngresoTipo.sinEspecificar: return 'sin_especificar';
   }
 }
 

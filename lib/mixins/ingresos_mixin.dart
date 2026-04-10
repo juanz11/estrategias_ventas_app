@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 
+String _ingresoTipoToApi(IngresoTipo tipo) {
+  switch (tipo) {
+    case IngresoTipo.fija: return 'fija';
+    case IngresoTipo.variable: return 'variable';
+    case IngresoTipo.sinEspecificar: return 'sin_especificar';
+  }
+}
+
 /// Mixin para operaciones CRUD de ingresos (presupuesto y reales)
 /// Requiere que la clase que lo use también use DataLoaderMixin
 mixin IngresosMixin<T extends StatefulWidget> on State<T> {
@@ -17,7 +25,7 @@ mixin IngresosMixin<T extends StatefulWidget> on State<T> {
     try {
       final json = await apiService.createIngreso(
         etiqueta: ingreso.etiqueta,
-        tipo: ingreso.tipo.name,
+        tipo: _ingresoTipoToApi(ingreso.tipo),
         monto: ingreso.monto,
         mes: ingreso.mes,
         esPresupuesto: false,
@@ -106,7 +114,7 @@ mixin IngresosMixin<T extends StatefulWidget> on State<T> {
     try {
       final json = await apiService.createIngreso(
         etiqueta: ingreso.etiqueta,
-        tipo: ingreso.tipo.name,
+        tipo: _ingresoTipoToApi(ingreso.tipo),
         monto: ingreso.monto,
         mes: ingreso.mes,
         esPresupuesto: true,
