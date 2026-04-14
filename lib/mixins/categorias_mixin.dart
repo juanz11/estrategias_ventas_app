@@ -9,19 +9,13 @@ mixin CategoriasMixin<T extends StatefulWidget> on State<T> {
 
   void _safeSetState(VoidCallback fn) {
     if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(fn);
-      });
+      setState(fn);
     }
   }
 
   void _showSnack(String msg) {
     if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-        }
-      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 

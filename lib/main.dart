@@ -1173,8 +1173,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     await editIngresoReal(index, result);
   }
 
-  void _deleteIngresoReal(int index) {
-    deleteIngresoReal(index);
+  Future<void> _deleteIngresoReal(int index) async {
+    await deleteIngresoReal(index);
   }
 
   Future<void> _addGastoReal() async {
@@ -1193,8 +1193,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     await editGastoReal(index, gasto, archivo: archivo);
   }
 
-  void _deleteGastoReal(int index) {
-    deleteGastoReal(index);
+  Future<void> _deleteGastoReal(int index) async {
+    await deleteGastoReal(index);
   }
 
   // ========== FUNCIONES COMPARTIDAS ==========
@@ -1314,8 +1314,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _IngresosMensualesScreen(
-          items: ingresosReales,
-          gastos: gastosReales,
+          getItems: () => ingresosReales,
+          getGastos: () => gastosReales,
           onAdd: _addIngresoReal,
           onEdit: _editIngresoReal,
           onDelete: _deleteIngresoReal,
@@ -3341,8 +3341,8 @@ class _IngresosMensualesTab extends StatelessWidget {
 
 class _IngresosMensualesScreen extends StatefulWidget {
   const _IngresosMensualesScreen({
-    required this.items,
-    required this.gastos,
+    required this.getItems,
+    required this.getGastos,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
@@ -3353,14 +3353,14 @@ class _IngresosMensualesScreen extends StatefulWidget {
     required this.onEditCategoria,
   });
 
-  final List<IngresoMensual> items;
-  final List<GastoMensual> gastos;
+  final List<IngresoMensual> Function() getItems;
+  final List<GastoMensual> Function() getGastos;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
-  final void Function(int index) onDelete;
+  final Future<void> Function(int index) onDelete;
   final Future<void> Function() onAddGasto;
   final Future<void> Function(int index) onEditGasto;
-  final void Function(int index) onDeleteGasto;
+  final Future<void> Function(int index) onDeleteGasto;
   final Future<void> Function(String categoria) onAddGastosCategoria;
   final Future<void> Function(String categoria) onEditCategoria;
 
@@ -3370,14 +3370,9 @@ class _IngresosMensualesScreen extends StatefulWidget {
 }
 
 class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
-  late List<IngresoMensual> _items;
-  late List<GastoMensual> _gastos;
-
   @override
   void initState() {
     super.initState();
-    _items = List.from(widget.items);
-    _gastos = List.from(widget.gastos);
   }
 
   Future<void> _confirmDeleteGasto(int index) async {
@@ -3395,43 +3390,43 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
   Future<void> _addAndRefresh() async {
     await widget.onAdd();
     if (!mounted) return;
-    setState(() => _items = List.from(widget.items));
+    setState(() {});
   }
 
   Future<void> _editAndRefresh(int index) async {
     await widget.onEdit(index);
     if (!mounted) return;
-    setState(() => _items = List.from(widget.items));
+    setState(() {});
   }
 
-  void _deleteAndRefresh(int index) {
-    widget.onDelete(index);
+  Future<void> _deleteAndRefresh(int index) async {
+    await widget.onDelete(index);
     if (!mounted) return;
-    setState(() => _items = List.from(widget.items));
+    setState(() {});
   }
 
   Future<void> _addGastoAndRefresh() async {
     await widget.onAddGasto();
     if (!mounted) return;
-    setState(() => _gastos = List.from(widget.gastos));
+    setState(() {});
   }
 
   Future<void> _editGastoAndRefresh(int index) async {
     await widget.onEditGasto(index);
     if (!mounted) return;
-    setState(() => _gastos = List.from(widget.gastos));
+    setState(() {});
   }
 
-  void _deleteGastoAndRefresh(int index) {
-    widget.onDeleteGasto(index);
+  Future<void> _deleteGastoAndRefresh(int index) async {
+    await widget.onDeleteGasto(index);
     if (!mounted) return;
-    setState(() => _gastos = List.from(widget.gastos));
+    setState(() {});
   }
 
   Future<void> _addGastosCategoriaAndRefresh(String categoria) async {
     await widget.onAddGastosCategoria(categoria);
     if (!mounted) return;
-    setState(() => _gastos = List.from(widget.gastos));
+    setState(() {});
   }
 
   Future<void> _editCategoriaAndRefresh(String categoria) async {
@@ -3446,8 +3441,8 @@ class _IngresosMensualesScreenState extends State<_IngresosMensualesScreen> {
       appBar: AppBar(title: const Text('Operaciones')),
       body: SafeArea(
         child: _IngresosMensualesView(
-          items: _items,
-          gastos: _gastos,
+          items: widget.getItems(),
+          gastos: widget.getGastos(),
           onAdd: _addAndRefresh,
           onEdit: _editAndRefresh,
           onDelete: _confirmDelete,

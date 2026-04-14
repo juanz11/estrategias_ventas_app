@@ -4,13 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io' show Platform, File;
 
 class ApiService {
-  // Para Android Emulator usa 10.0.2.2, para iOS/macOS/Web usa 127.0.0.1
   static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8000/api';
-    } else {
-      return 'http://127.0.0.1:8000/api';
-    }
+    return 'https://balance.zcdigitalsolutions.com/api';
   }
   
   String? _token;
