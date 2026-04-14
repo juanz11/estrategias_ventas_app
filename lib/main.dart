@@ -1220,7 +1220,23 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (!mounted || result == null) return;
     final trimmed = result.trim();
     if (trimmed.isEmpty) return;
-    await addCategoria(trimmed);
+    // Defer to next frame to avoid InheritedWidget assertion after dialog close
+    await Future.delayed(Duration.zero);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await apiService.createCategoria(trimmed);
+      if (!mounted) return;
+      setState(() {
+        final set = Set<String>.from(categoriasGasto);
+        set.add(trimmed);
+        categoriasGasto = set;
+      });
+      messenger.showSnackBar(const SnackBar(content: Text('Categoría agregada')));
+    } catch (e) {
+      print('❌ Error creando categoría: $e');
+      if (mounted) messenger.showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+    }
   }
 
   Future<void> _editCategoriaGasto(String categoriaActual) async {
@@ -1228,32 +1244,70 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (!mounted || nuevoNombre == null) return;
     final trimmed = nuevoNombre.trim();
     if (trimmed.isEmpty || trimmed == categoriaActual) return;
-    await editCategoria(categoriaActual, trimmed);
-    // Actualizar gastos locales que tengan la categoria vieja
-    setState(() {
-      for (var i = 0; i < gastosPresupuesto.length; i++) {
-        if (gastosPresupuesto[i].categoria == categoriaActual) {
-          gastosPresupuesto[i] = gastosPresupuesto[i].copyWith(categoria: trimmed);
-        }
+    await Future.delayed(Duration.zero);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final categoriasData = await apiService.getCategorias();
+      final categoria = categoriasData.firstWhere(
+        (c) => c['nombre'] == categoriaActual,
+        orElse: () => null,
+      );
+      if (categoria != null && categoria['id'] != null) {
+        await apiService.updateCategoria(categoria['id'], trimmed);
       }
-      for (var i = 0; i < gastosReales.length; i++) {
-        if (gastosReales[i].categoria == categoriaActual) {
-          gastosReales[i] = gastosReales[i].copyWith(categoria: trimmed);
+      if (!mounted) return;
+      setState(() {
+        final set = Set<String>.from(categoriasGasto);
+        set.remove(categoriaActual);
+        set.add(trimmed);
+        categoriasGasto = set;
+        for (var i = 0; i < gastosPresupuesto.length; i++) {
+          if (gastosPresupuesto[i].categoria == categoriaActual) {
+            gastosPresupuesto[i] = gastosPresupuesto[i].copyWith(categoria: trimmed);
+          }
         }
-      }
-    });
+        for (var i = 0; i < gastosReales.length; i++) {
+          if (gastosReales[i].categoria == categoriaActual) {
+            gastosReales[i] = gastosReales[i].copyWith(categoria: trimmed);
+          }
+        }
+      });
+      messenger.showSnackBar(const SnackBar(content: Text('Categoría renombrada')));
+    } catch (e) {
+      print('❌ Error renombrando categoría: $e');
+      messenger.showSnackBar(SnackBar(content: Text('Error al renombrar: $e')));
+    }
   }
 
   Future<void> _deleteCategoriaGasto(String categoria) async {
     final ok = await _confirmDeleteCategoria(context, categoria);
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
+    await Future.delayed(Duration.zero);
     if (!mounted) return;
-    await deleteCategoria(categoria);
-    // Also remove gastos with this category
-    setState(() {
-      gastosPresupuesto.removeWhere((g) => g.categoria == categoria);
-      gastosReales.removeWhere((g) => g.categoria == categoria);
-    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final categoriasData = await apiService.getCategorias();
+      final cat = categoriasData.firstWhere(
+        (c) => c['nombre'] == categoria,
+        orElse: () => null,
+      );
+      if (cat != null && cat['id'] != null) {
+        await apiService.deleteCategoria(cat['id']);
+      }
+      if (!mounted) return;
+      setState(() {
+        final set = Set<String>.from(categoriasGasto);
+        set.remove(categoria);
+        categoriasGasto = set;
+        gastosPresupuesto.removeWhere((g) => g.categoria == categoria);
+        gastosReales.removeWhere((g) => g.categoria == categoria);
+      });
+      messenger.showSnackBar(const SnackBar(content: Text('Categoría eliminada')));
+    } catch (e) {
+      print('❌ Error eliminando categoría: $e');
+      messenger.showSnackBar(SnackBar(content: Text('Error al eliminar: $e')));
+    }
   }
 
   void _openIngresosScreen() {

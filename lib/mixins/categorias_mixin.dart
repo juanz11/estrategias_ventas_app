@@ -7,29 +7,38 @@ mixin CategoriasMixin<T extends StatefulWidget> on State<T> {
   Set<String> get categoriasGasto;
   set categoriasGasto(Set<String> value);
 
+  void _safeSetState(VoidCallback fn) {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(fn);
+      });
+    }
+  }
+
+  void _showSnack(String msg) {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        }
+      });
+    }
+  }
+
   // ========== CATEGORÍAS ==========
 
   Future<void> addCategoria(String nombre) async {
     try {
       await apiService.createCategoria(nombre);
-      setState(() {
+      _safeSetState(() {
         final set = Set<String>.from(categoriasGasto);
         set.add(nombre);
         categoriasGasto = set;
       });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Categoría agregada')),
-        );
-      }
+      _showSnack('Categoría agregada');
     } catch (e) {
       print('❌ Error creando categoría: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
-      }
+      _showSnack('Error al guardar: $e');
     }
   }
 
@@ -43,32 +52,22 @@ mixin CategoriasMixin<T extends StatefulWidget> on State<T> {
 
       if (categoria != null && categoria['id'] != null) {
         await apiService.updateCategoria(categoria['id'], nuevoNombre);
-        setState(() {
+        _safeSetState(() {
           final set = Set<String>.from(categoriasGasto);
           set.remove(nombreActual);
           set.add(nuevoNombre);
           categoriasGasto = set;
         });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Categoría renombrada')),
-          );
-        }
+        _showSnack('Categoría renombrada');
       }
     } catch (e) {
       print('❌ Error renombrando categoría: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al renombrar: $e')),
-        );
-      }
+      _showSnack('Error al renombrar: $e');
     }
   }
 
   Future<void> deleteCategoria(String nombre) async {
     try {
-      // Primero necesitamos obtener el ID de la categoría
       final categoriasData = await apiService.getCategorias();
       final categoria = categoriasData.firstWhere(
         (c) => c['nombre'] == nombre,
@@ -77,25 +76,16 @@ mixin CategoriasMixin<T extends StatefulWidget> on State<T> {
 
       if (categoria != null && categoria['id'] != null) {
         await apiService.deleteCategoria(categoria['id']);
-        setState(() {
+        _safeSetState(() {
           final set = Set<String>.from(categoriasGasto);
           set.remove(nombre);
           categoriasGasto = set;
         });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Categoría eliminada')),
-          );
-        }
+        _showSnack('Categoría eliminada');
       }
     } catch (e) {
       print('❌ Error eliminando categoría: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al eliminar: $e')),
-        );
-      }
+      _showSnack('Error al eliminar: $e');
     }
   }
 }
