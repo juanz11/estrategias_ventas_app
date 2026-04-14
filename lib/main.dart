@@ -898,7 +898,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(width: 8),
-            const Text('Recordatorio de Deuda'),
+            const Expanded(child: Text('Recordatorio de Deuda')),
           ],
         ),
         content: Column(
@@ -1022,7 +1022,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(width: 8),
-            Text('Recordatorios (${deudasHoy.length})'),
+            Expanded(child: Text('Recordatorios (${deudasHoy.length})')),
           ],
         ),
         content: SingleChildScrollView(
