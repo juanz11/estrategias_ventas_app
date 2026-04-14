@@ -847,7 +847,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _DeudasScreen(
-          deudas: deudas,
+          getDeudas: () => deudas,
           onAdd: _addDeuda,
           onEdit: _editDeuda,
           onDelete: _deleteDeuda,
@@ -883,8 +883,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     await editDeuda(index, deuda, archivo: archivo);
   }
 
-  void _deleteDeuda(int index) {
-    deleteDeuda(index);
+  Future<void> _deleteDeuda(int index) async {
+    await deleteDeuda(index);
   }
 
   void _mostrarAlertaDeuda(Deuda deuda) {
@@ -6788,23 +6788,29 @@ void _verArchivoDeuda(BuildContext context, Deuda deuda) {
   );
 }
 
-class _DeudasScreen extends StatelessWidget {
+class _DeudasScreen extends StatefulWidget {
   const _DeudasScreen({
-    required this.deudas,
+    required this.getDeudas,
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
   });
 
-  final List<Deuda> deudas;
+  final List<Deuda> Function() getDeudas;
   final Future<void> Function() onAdd;
   final Future<void> Function(int index) onEdit;
-  final void Function(int index) onDelete;
+  final Future<void> Function(int index) onDelete;
 
+  @override
+  State<_DeudasScreen> createState() => _DeudasScreenState();
+}
+
+class _DeudasScreenState extends State<_DeudasScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     
+    final deudas = widget.getDeudas();
     final deudasPorPagar = deudas.where((d) => d.tipo == TipoDeuda.porPagar).toList();
     final deudasPorCobrar = deudas.where((d) => d.tipo == TipoDeuda.porCobrar).toList();
     
@@ -6817,7 +6823,10 @@ class _DeudasScreen extends StatelessWidget {
         title: const Text('Deudas Generales'),
         actions: [
           IconButton(
-            onPressed: onAdd,
+            onPressed: () async {
+              await widget.onAdd();
+              setState(() {});
+            },
             icon: const Icon(Icons.add),
             tooltip: 'Agregar deuda',
           ),
@@ -6983,8 +6992,14 @@ class _DeudasScreen extends StatelessWidget {
                         return _DeudaTile(
                           deuda: deuda,
                           color: Colors.red.shade700,
-                          onEdit: () => onEdit(deudaIndex),
-                          onDelete: () => onDelete(deudaIndex),
+                          onEdit: () async {
+                            await widget.onEdit(deudaIndex);
+                            setState(() {});
+                          },
+                          onDelete: () async {
+                            await widget.onDelete(deudaIndex);
+                            setState(() {});
+                          },
                           onVerArchivo: () => _verArchivoDeuda(context, deuda),
                         );
                       },
@@ -7012,8 +7027,14 @@ class _DeudasScreen extends StatelessWidget {
                         return _DeudaTile(
                           deuda: deuda,
                           color: Colors.green.shade700,
-                          onEdit: () => onEdit(deudaIndex),
-                          onDelete: () => onDelete(deudaIndex),
+                          onEdit: () async {
+                            await widget.onEdit(deudaIndex);
+                            setState(() {});
+                          },
+                          onDelete: () async {
+                            await widget.onDelete(deudaIndex);
+                            setState(() {});
+                          },
                           onVerArchivo: () => _verArchivoDeuda(context, deuda),
                         );
                       },
