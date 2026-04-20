@@ -734,6 +734,13 @@ class _GastosGroupedCard extends StatelessWidget {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        if (g.tieneArchivo)
+                                          IconButton(
+                                            onPressed: () => _verArchivoGasto(context, g),
+                                            icon: const Icon(Icons.attach_file),
+                                            color: Colors.blue.shade700,
+                                            tooltip: 'Ver comprobante',
+                                          ),
                                         IconButton(
                                           onPressed: () {
                                             onEdit(index);
@@ -6711,6 +6718,76 @@ class _EvolucionAnualChart extends StatelessWidget {
       ),
     );
   }
+}
+
+void _verArchivoGasto(BuildContext context, GastoMensual gasto) {
+  if (!gasto.tieneArchivo) return;
+  
+  showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppBar(
+            title: Text(gasto.archivoNombre ?? 'Comprobante'),
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          if (gasto.archivoTipo == 'image')
+            Flexible(
+              child: Image.network(
+                gasto.archivoUrl!,
+                fit: BoxFit.contain,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const Icon(Icons.picture_as_pdf, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    gasto.archivoNombre ?? 'Documento PDF',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final uri = Uri.parse(gasto.archivoUrl!);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Abrir PDF'),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
 }
 
 void _verArchivoDeuda(BuildContext context, Deuda deuda) {
